@@ -2425,7 +2425,7 @@ def reminder_notif(data: Dict[str, List[Dict[str, Any]]], current_date: datetime
             if reminder_period_start <= days_until_expiration <= reminder_period_end:
                 message = (
                     f"━━━━━━━━━━━━━━━━━━\n"
-                    f"⚠️ *Peringatan: Akun {vpn_type.upper()} akan segera expired*\n"
+                    f"⚠️ *Akun {vpn_type.upper()} akan segera expired*\n"
                     f"*Username :* `{entry['username']}`\n"
                     f"*Expired On :* `{expiration_date.strftime('%d-%m-%Y %H:%M')} WIB`\n"
                     f"━━━━━━━━━━━━━━━━━━"
