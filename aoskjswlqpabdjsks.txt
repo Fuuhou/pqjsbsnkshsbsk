@@ -571,11 +571,11 @@ def create_vpn(update: Update, context: CallbackContext):
         # Parse the command message
         message = update.message.text.split()
         user_id = str(update.message.from_user.id)
-        # Reaksi ke pesan user
-        context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+        waiting_message = update.message.reply_text("⏳")
 
         # Check command format
         if len(message) < 5:
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text(
                 'Format perintah salah. Gunakan: /create <server> <tipe_vpn> <username> <coins> atau /create <server> ssh <username> <password> <coins>'
             )
@@ -590,12 +590,14 @@ def create_vpn(update: Update, context: CallbackContext):
 
         # Validate server existence
         if input_host not in hosts_data:
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text('Server tidak ditemukan. Silakan periksa input server kamu.')
             return
 
         # Check stock for the specified host
         ip_address = ip_data[input_host]
         if ip_address not in stock_data or stock_data[ip_address]['stock_vpn'] <= 0:
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text('Stok VPN untuk server ini tidak ditemukan atau habis. Silakan pilih server lain.')
             return
 
@@ -605,6 +607,7 @@ def create_vpn(update: Update, context: CallbackContext):
         # Validate SSH input
         if vpn_type == "ssh":
             if len(message) < 6:
+                context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
                 update.message.reply_text('Format salah! Untuk SSH, gunakan /create <server> ssh <username> <password> <coins>.')
                 return
             username = message[3]
@@ -616,23 +619,27 @@ def create_vpn(update: Update, context: CallbackContext):
 
         # Validate username
         if not re.match(r'^[A-Za-z0-9]{3,15}$', username):
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text('Username harus terdiri dari 3 hingga 15 karakter. Berisi huruf, angka dan tanpa spasi.')
             return
 
         # Check if the username is already registered
         existing_vpn_data = load_data_from_github(AKUN_VPN_PATH)  # Load existing VPN data
         if any(vpn.get('username') == username for user_vpns in existing_vpn_data.values() for vpn in user_vpns):
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text(f'Username ⟨ `{username}` ⟩ sudah terdaftar. Silakan pilih username lain.', parse_mode="Markdown")
             return
 
         # Validate password for SSH type
         if vpn_type == "ssh":
             if not re.match(r'^[A-Za-z0-9]{1,10}$', password):
+                context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
                 update.message.reply_text('Password harus terdiri dari 1 hingga 10 karakter. Berisi huruf, angka dan tanpa spasi.')
                 return
 
         # Validate maximum coins limit
         if pay_coins > 50:
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text('Jumlah koin maksimal adalah 50.')
             return
 
@@ -644,6 +651,7 @@ def create_vpn(update: Update, context: CallbackContext):
 
         # Check if price exists
         if price_per_coin == 0:
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text('Harga untuk server ini tidak ditemukan.')
             return
 
@@ -653,6 +661,7 @@ def create_vpn(update: Update, context: CallbackContext):
         # Validate VPN type
         valid_vpn_types = ["ssh", "vmessws", "vlessws", "trojanws", "vmessgrpc", "vlessgrpc", "trojangrpc"]
         if vpn_type not in valid_vpn_types:
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text(
                 f"Tipe VPN tidak valid. Gunakan salah satu dari: `ssh`, `vmessws`, `vlessws`, `trojanws`, `vmessgrpc`, `vlessgrpc`, `trojangrpc`.",
                 parse_mode="Markdown"
@@ -665,6 +674,7 @@ def create_vpn(update: Update, context: CallbackContext):
 
         # Check if user has enough coins
         if user_info.get('coins', 0) < pay_coins:
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text('Koin kamu tidak cukup.')
             return
 
@@ -692,12 +702,14 @@ def create_vpn(update: Update, context: CallbackContext):
         # Check for valid output
         if not result.stdout.strip() or result.stdout.strip() == "🏬 @xiestorez":
             rollback_coins(user_info, pay_coins, user_data)
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text('Proses gagal atau hasil tidak valid. Koin kamu telah dikembalikan.', parse_mode="Markdown")
             return
 
         # Check specific error: "IP Address Not Found In Our Database"
         if "IP Address Not Found In Our Database" in result.stdout:
             rollback_coins(user_info, pay_coins, user_data)
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text('Proses gagal karena IP Address tidak ditemukan dalam database kami. Koin kamu telah dikembalikan.', parse_mode="Markdown")
             return
 
@@ -721,6 +733,7 @@ def create_vpn(update: Update, context: CallbackContext):
         # Check for errors in the output
         if "please choose another name" in filtered_output or f"Pengguna {username} sudah ada!" in filtered_output:
             rollback_coins(user_info, pay_coins, user_data)
+            context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text(f'Username *{vpn_type.upper()}* ⟨ `{username}` ⟩ sudah ada. Silakan pilih username lain.', parse_mode="Markdown")
             return
 
@@ -750,6 +763,7 @@ def create_vpn(update: Update, context: CallbackContext):
         record_and_notify(user_id, f"User membuat akun vpn Non-STB, host: {input_host} - tipe: {vpn_type} - nama: {username} - koin: {pay_coins}")
 
         # Success notification
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
         update.message.reply_text(f"{filtered_output}🏬 <b>@xiestorez</b>", parse_mode="HTML")
 
     except Exception as e:
@@ -757,6 +771,7 @@ def create_vpn(update: Update, context: CallbackContext):
         # Refund coins if an exception occurs
         if user_id in user_data and user_info.get('coins', 0) < pay_coins:
             rollback_coins(user_info, pay_coins, user_data)
+        context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
         update.message.reply_text(f'Gagal membuat {vpn_type} : `{str(e)}`', parse_mode="Markdown")
 
 @registered_user_only
@@ -765,8 +780,6 @@ def create_vpn_stb(update: Update, context: CallbackContext):
         # Parse the command message
         message = update.message.text.split()
         user_id = str(update.message.from_user.id)
-        # Reaksi ke pesan user
-        context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
 
         # Check command format
         if len(message) < 5:
