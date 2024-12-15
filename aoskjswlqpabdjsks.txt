@@ -709,26 +709,26 @@ def create_vpn(update: Update, context: CallbackContext):
         if not result.stdout.strip() or result.stdout.strip() == "🏬 @xiestorez":
             rollback_coins(user_info, pay_coins, user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text('Proses gagal atau hasil tidak valid. Koin kamu telah dikembalikan.', parse_mode="Markdown")
+            update.message.reply_text('Proses gagal atau hasil tidak valid', parse_mode="Markdown")
             return
 
         # Check specific error
         if "IP Address Not Found In Our Database" in result.stdout:
             rollback_coins(user_info, pay_coins, user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text('Proses gagal karena IP Address tidak ditemukan dalam database kami. Koin kamu telah dikembalikan.', parse_mode="Markdown")
+            update.message.reply_text('Proses gagal karena IP Address tidak ditemukan dalam database kami', parse_mode="Markdown")
             return
 
         if "Script Expired !" in result.stdout:
             rollback_coins(user_info, pay_coins, user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text('Proses gagal karena script expired. Koin kamu telah dikembalikan.', parse_mode="Markdown")
+            update.message.reply_text('Proses gagal karena script expired', parse_mode="Markdown")
             return
 
         if "Kedua URL gagal diakses!" in result.stdout:
             rollback_coins(user_info, pay_coins, user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text('Proses gagal karena URL gagal diakses. Koin kamu telah dikembalikan.', parse_mode="Markdown")
+            update.message.reply_text('Proses gagal karena URL gagal diakses', parse_mode="Markdown")
             return
 
         # Clean the output
@@ -930,26 +930,26 @@ def create_vpn_stb(update: Update, context: CallbackContext):
         if not result.stdout.strip() or result.stdout.strip() == "🏬 @xiestorez":
             rollback_coins(user_info, pay_coins, user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text('Proses gagal atau hasil tidak valid. Koin kamu telah dikembalikan.', parse_mode="Markdown")
+            update.message.reply_text('Proses gagal atau hasil tidak valid', parse_mode="Markdown")
             return
 
         # Check specific error
         if "IP Address Not Found In Our Database" in result.stdout:
             rollback_coins(user_info, pay_coins, user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text('Proses gagal karena IP Address tidak ditemukan dalam database kami. Koin kamu telah dikembalikan.', parse_mode="Markdown")
+            update.message.reply_text('Proses gagal karena IP Address tidak ditemukan dalam database kami', parse_mode="Markdown")
             return
 
         if "Script Expired !" in result.stdout:
             rollback_coins(user_info, pay_coins, user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text('Proses gagal karena script expired. Koin kamu telah dikembalikan.', parse_mode="Markdown")
+            update.message.reply_text('Proses gagal karena script expired', parse_mode="Markdown")
             return
 
         if "Kedua URL gagal diakses!" in result.stdout:
             rollback_coins(user_info, pay_coins, user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text('Proses gagal karena URL gagal diakses. Koin kamu telah dikembalikan.', parse_mode="Markdown")
+            update.message.reply_text('Proses gagal karena URL gagal diakses', parse_mode="Markdown")
             return
 
         # Clean the output
@@ -1178,7 +1178,7 @@ def renew_vpn(update, context):
         if error:
             rollback_coins(user_data, pay_coins, all_user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text(f'Terjadi kesalahan saat memperbarui *{vpn_type.upper()}* VPN. Transaksi dibatalkan dan koin dikembalikan.', parse_mode="Markdown")
+            update.message.reply_text(f'Terjadi kesalahan saat memperbarui *{vpn_type.upper()}* VPN', parse_mode="Markdown")
             return
 
         # Check specific error
@@ -1186,7 +1186,7 @@ def renew_vpn(update, context):
             rollback_coins(user_data, pay_coins, all_user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text(
-                'Proses gagal karena IP Address tidak ditemukan dalam database kami. Koin kamu telah dikembalikan.',
+                'Proses gagal karena IP server tidak ditemukan dalam database',
                 parse_mode="Markdown"
             )
             return
@@ -1195,7 +1195,7 @@ def renew_vpn(update, context):
             rollback_coins(user_data, pay_coins, all_user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text(
-                'Proses gagal karena script expired. Koin kamu telah dikembalikan.',
+                'Proses gagal karena script expired',
                 parse_mode="Markdown"
             )
             return
@@ -1204,7 +1204,7 @@ def renew_vpn(update, context):
             rollback_coins(user_data, pay_coins, all_user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text(
-                'Proses gagal karena URL gagal diakses. Koin kamu telah dikembalikan.',
+                'Proses gagal karena URL tidak bisa diakses',
                 parse_mode="Markdown"
             )
             return
@@ -1213,7 +1213,7 @@ def renew_vpn(update, context):
             rollback_coins(user_data, pay_coins, all_user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text(
-                f"User {username} Not Found.",
+                f"Proses gagal karena user `{username}` tidak ditemukan di server",
                 parse_mode="Markdown"
             )
             return
