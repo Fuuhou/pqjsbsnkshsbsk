@@ -1185,27 +1185,38 @@ def renew_vpn(update, context):
         if "IP Address Not Found In Our Database" in output:
             rollback_coins(user_data, pay_coins, all_user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text('Proses gagal karena IP Address tidak ditemukan dalam database kami. Koin kamu telah dikembalikan.', parse_mode="Markdown")
+            update.message.reply_text(
+                'Proses gagal karena IP Address tidak ditemukan dalam database kami. Koin kamu telah dikembalikan.',
+                parse_mode="Markdown"
+            )
             return
-
+        
         if "Script Expired !" in output:
             rollback_coins(user_data, pay_coins, all_user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text('Proses gagal karena script expired. Koin kamu telah dikembalikan.', parse_mode="Markdown")
+            update.message.reply_text(
+                'Proses gagal karena script expired. Koin kamu telah dikembalikan.',
+                parse_mode="Markdown"
+            )
             return
-
+        
         if "Kedua URL gagal diakses!" in output:
             rollback_coins(user_data, pay_coins, all_user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text('Proses gagal karena URL gagal diakses. Koin kamu telah dikembalikan.', parse_mode="Markdown")
+            update.message.reply_text(
+                'Proses gagal karena URL gagal diakses. Koin kamu telah dikembalikan.',
+                parse_mode="Markdown"
+            )
             return
-
+        
         if f"user {username} not found".lower() in output.lower():
             rollback_coins(user_data, pay_coins, all_user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text(
-            f"User {username} Not Found.", parse_mode="Markdown")
-          return
+                f"User {username} Not Found.",
+                parse_mode="Markdown"
+            )
+            return
 
         # Load provider information
         ip_data = load_data_from_github(SERVER_PATH)
