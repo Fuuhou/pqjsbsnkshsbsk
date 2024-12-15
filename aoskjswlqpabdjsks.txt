@@ -1200,11 +1200,12 @@ def renew_vpn(update, context):
             update.message.reply_text('Proses gagal karena URL gagal diakses. Koin kamu telah dikembalikan.', parse_mode="Markdown")
             return
 
-        if "Not Found" in output:
+        if f"user {username} not found".lower() in output.lower():
             rollback_coins(user_data, pay_coins, all_user_data)
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text('Proses gagal karena URL gagal diakses. Koin kamu telah dikembalikan.', parse_mode="Markdown")
-            return
+            update.message.reply_text(
+            f"User {username} Not Found.", parse_mode="Markdown")
+          return
 
         # Load provider information
         ip_data = load_data_from_github(SERVER_PATH)
