@@ -1660,10 +1660,9 @@ def info(update: Update, context: CallbackContext) -> None:
 
         # Function to escape HTML special characters
         def escape_html(text):
-            # Ensure the text is a string before applying escape
-            if isinstance(text, str):
-                return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
-            return text  # Return the original value if it's not a string
+            # Convert non-string data to string before escaping
+            text = str(text)
+            return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
 
         # Function to fetch profile photo
         def fetch_profile_photo(user_id):
