@@ -1647,6 +1647,17 @@ def hapus(update: Update, context: CallbackContext):
     else:
         update.message.reply_text(f"User dengan ID `{target_user_id}` tidak ditemukan.", parse_mode="Markdown")
 
+def load_user_info(user_id, data, koin_data):
+    """
+    Memuat informasi pengguna dari data yang ada (termasuk data koin).
+    """
+    user_info = data.get(user_id)
+    if user_info:
+        coins = koin_data.get(user_id, {}).get('coins', 'N/A')
+        join_date = koin_data.get(user_id, {}).get('join_date', 'N/A')
+        return user_info, coins, join_date
+    return None, None, None
+
 @registered_user_only
 def info(update: Update, context: CallbackContext) -> None:
     try:
@@ -1744,8 +1755,6 @@ def info(update: Update, context: CallbackContext) -> None:
                 update.message.reply_photo(photo=photo_file, caption=reply_caption, parse_mode=ParseMode.MARKDOWN)
             else:
                 update.message.reply_text(reply_caption, parse_mode=ParseMode.MARKDOWN)
-        else:
-            update.message.reply_text(f"Informasi pengguna {replied_user_fullname} tidak ditemukan.")
 
 @registered_user_only
 def menux_command(update: Update, context: CallbackContext) -> None:
