@@ -644,13 +644,14 @@ def create_vpn(update: Update, context: CallbackContext):
                 return
 
         # Validate maximum days limit
-        if days > 30:  # Misalnya batas maksimal adalah 30 hari
+        if days > 60:
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-            update.message.reply_text('Jumlah hari maksimal adalah 30.')
+            update.message.reply_text('Jumlah hari maksimal adalah 60.')
             return
         
         # Hitung biaya berdasarkan jumlah hari
-        price_per_day = get_price_for_server_and_label(input_host, "Non-STB")  # Dapatkan harga per hari dari data server
+        price_per_day = get_price_for_server_and_label(input_host, "Non-STB")
+        label = "Non-STB"
         
         # Validate price existence
         if not price_per_day:
@@ -672,7 +673,7 @@ def create_vpn(update: Update, context: CallbackContext):
             return
         
         # Load user data
-        user_data = load_data_from_github(FILE_PATH)  # Gunakan FILE_PATH untuk data pengguna
+        user_data = load_data_from_github(FILE_PATH)
         user_info = user_data.get(user_id, {})
         
         # Check if user has enough coins
@@ -1658,22 +1659,6 @@ def info(update: Update, context: CallbackContext) -> None:
         full_name = update.message.from_user.full_name
         username = update.message.from_user.username
 
-        # Function to escape HTML special characters
-        def escape_html(text):
-            # Convert non-string data to string before escaping
-            text = str(text)
-            return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
-
-        # Function to fetch profile photo
-        def fetch_profile_photo(user_id):
-            try:
-                profile_photos = context.bot.get_user_profile_photos(user_id)
-                if profile_photos.total_count > 0:
-                    return profile_photos.photos[0][-1].file_id
-            except Exception as e:
-                logging.error(f"Error fetching profile photo for {user_id}: {e}")
-            return None
-
         if len(message) == 1:  # User requested their own info
             if user_id in data:
                 coins = koin_data.get(user_id, {}).get('coins', 'N/A')
@@ -1681,19 +1666,20 @@ def info(update: Update, context: CallbackContext) -> None:
 
                 caption = (
                     f"━━━━━━━━━━━━━━━━━━\n"
-                    f"<b>Nama :</b> {escape_html(full_name)}\n"
-                    f"<b>User ID :</b> <a href='tg://user?id={user_id}'>{user_id}</a>\n"
-                    f"<b>Username :</b> @{escape_html(username)}\n"
-                    f"<b>Saldo Koin :</b> {escape_html(coins)}\n"
-                    f"<b>Bergabung :</b> {escape_html(join_date)}\n"
+                    f"*Nama :* `{full_name}`\n"
+                    f"*User ID :* [{user_id}](tg://user?id={user_id})\n"
+                    f"*Username :* @{username}\n"
+                    f"*Saldo Koin :* `{coins}`\n"
+                    f"*Bergabung :* `{join_date}`\n"
                     f"━━━━━━━━━━━━━━━━━━"
                 )
 
-                photo_file = fetch_profile_photo(user_id)
-                if photo_file:
-                    update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.HTML)
+                profile_photos = context.bot.get_user_profile_photos(user_id)
+                if profile_photos.total_count > 0:
+                    photo_file = profile_photos.photos[0][-1].file_id
+                    update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.MARKDOWN)
                 else:
-                    update.message.reply_text(caption, parse_mode=ParseMode.HTML)
+                    update.message.reply_text(caption, parse_mode=ParseMode.MARKDOWN)
             else:
                 update.message.reply_text('Informasi user tidak ditemukan.')
 
@@ -1721,19 +1707,24 @@ def info(update: Update, context: CallbackContext) -> None:
 
                 caption = (
                     f"━━━━━━━━━━━━━━━━━━\n"
-                    f"<b>Nama :</b> {escape_html(user_info.get('fullname', 'N/A'))}\n"
-                    f"<b>User ID :</b> <a href='tg://user?id={target_user_id}'>{target_user_id}</a>\n"
-                    f"<b>Username :</b> @{escape_html(user_info.get('username', 'N/A'))}\n"
-                    f"<b>Saldo Koin :</b> {escape_html(coins)}\n"
-                    f"<b>Bergabung :</b> {escape_html(join_date)}\n"
+                    f"*Nama :* `{user_info.get('fullname', 'N/A')}`\n"
+                    f"*User ID :* [{target_user_id}](tg://user?id={target_user_id})\n"
+                    f"*Username :* @{user_info.get('username', 'N/A')}\n"
+                    f"*Saldo Koin :* `{coins}`\n"
+                    f"*Bergabung :* `{join_date}`\n"
                     f"━━━━━━━━━━━━━━━━━━"
                 )
 
-                photo_file = fetch_profile_photo(target_user_id)
-                if photo_file:
-                    update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.HTML)
-                else:
-                    update.message.reply_text(caption, parse_mode=ParseMode.HTML)
+                try:
+                    profile_photos = context.bot.get_user_profile_photos(target_user_id)
+                    if profile_photos.total_count > 0:
+                        photo_file = profile_photos.photos[0][-1].file_id
+                        update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.MARKDOWN)
+                    else:
+                        update.message.reply_text(caption, parse_mode=ParseMode.MARKDOWN)
+                except Exception as e:
+                    logging.error(f'Error fetching profile photo for {target_user_id}: {str(e)}')
+                    update.message.reply_text("Gagal mengambil foto profil pengguna.")
             else:
                 update.message.reply_text("User tidak ditemukan.")
 
@@ -1743,38 +1734,6 @@ def info(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         logging.error(f'Gagal menampilkan informasi pengguna: {str(e)}')
         update.message.reply_text(f'Gagal menampilkan informasi pengguna: {str(e)}')
-
-    # Handle reply to a message from another user (fix double replies)
-    if update.message.reply_to_message:
-        replied_user_id = str(update.message.reply_to_message.from_user.id)
-        replied_user_fullname = update.message.reply_to_message.from_user.full_name
-        replied_user_username = update.message.reply_to_message.from_user.username
-
-        # Check user data for replied message
-        user_info = data.get(replied_user_id, None)
-        if user_info:
-            coins = koin_data.get(replied_user_id, {}).get('coins', 'N/A')
-            join_date = koin_data.get(replied_user_id, {}).get('join_date', 'N/A')
-
-            reply_caption = (
-                f"━━━━━━━━━━━━━━━━━━\n"
-                f"<b>Nama :</b> {escape_html(replied_user_fullname)}\n"
-                f"<b>User ID :</b> <a href='tg://user?id={replied_user_id}'>{replied_user_id}</a>\n"
-                f"<b>Username :</b> @{escape_html(replied_user_username)}\n"
-                f"<b>Saldo Koin :</b> {escape_html(coins)}\n"
-                f"<b>Bergabung :</b> {escape_html(join_date)}\n"
-                f"━━━━━━━━━━━━━━━━━━"
-            )
-
-            # Send reply message only once
-            photo_file = fetch_profile_photo(replied_user_id)
-            if photo_file:
-                update.message.reply_photo(photo=photo_file, caption=reply_caption, parse_mode=ParseMode.HTML)
-            else:
-                update.message.reply_text(reply_caption, parse_mode=ParseMode.HTML)
-
-        # Ensure that the reply message is not sent again by the code above
-        return
 
 @registered_user_only
 def menux_command(update: Update, context: CallbackContext) -> None:
