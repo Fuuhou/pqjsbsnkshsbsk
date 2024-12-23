@@ -722,15 +722,7 @@ def create_vpn(update: Update, context: CallbackContext):
                 context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
                 update.message.reply_text(error_msg, parse_mode="Markdown")
                 return
-        
-        try:
-            # Handle specific error: URL gagal diakses
-            if "Kedua URL gagal diakses!" in result.stdout:
-                rollback_coins(user_info, pay_coins, user_data)
-                context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-                update.message.reply_text('Proses gagal karena URL gagal diakses.', parse_mode="Markdown")
-                return
-        
+
             # Clean and process the output
             filtered_output = result.stdout.strip()
         
@@ -2614,4 +2606,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
