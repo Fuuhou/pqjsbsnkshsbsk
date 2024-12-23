@@ -1647,17 +1647,6 @@ def hapus(update: Update, context: CallbackContext):
     else:
         update.message.reply_text(f"User dengan ID `{target_user_id}` tidak ditemukan.", parse_mode="Markdown")
 
-def load_user_info(user_id, data, koin_data):
-    """
-    Memuat informasi pengguna dari data yang ada (termasuk data koin).
-    """
-    user_info = data.get(user_id)
-    if user_info:
-        coins = koin_data.get(user_id, {}).get('coins', 'N/A')
-        join_date = koin_data.get(user_id, {}).get('join_date', 'N/A')
-        return user_info, coins, join_date
-    return None, None, None
-
 @registered_user_only
 def info(update: Update, context: CallbackContext) -> None:
     try:
@@ -1669,10 +1658,21 @@ def info(update: Update, context: CallbackContext) -> None:
         full_name = update.message.from_user.full_name
         username = update.message.from_user.username
 
-        if len(message) == 1:  # User requested their own info
-            user_info, coins, join_date = load_user_info(user_id, data, koin_data)
+        # Function to fetch profile photo
+        def fetch_profile_photo(user_id):
+            try:
+                profile_photos = context.bot.get_user_profile_photos(user_id)
+                if profile_photos.total_count > 0:
+                    return profile_photos.photos[0][-1].file_id
+            except Exception as e:
+                logging.error(f"Error fetching profile photo for {user_id}: {e}")
+            return None
 
-            if user_info:
+        if len(message) == 1:  # User requested their own info
+            if user_id in data:
+                coins = koin_data.get(user_id, {}).get('coins', 'N/A')
+                join_date = koin_data.get(user_id, {}).get('join_date', 'N/A')
+
                 caption = (
                     f"━━━━━━━━━━━━━━━━━━\n"
                     f"*Nama :* `{full_name}`\n"
@@ -1682,7 +1682,8 @@ def info(update: Update, context: CallbackContext) -> None:
                     f"*Bergabung :* `{join_date}`\n"
                     f"━━━━━━━━━━━━━━━━━━"
                 )
-                photo_file = fetch_profile_photo(context, user_id)
+
+                photo_file = fetch_profile_photo(user_id)
                 if photo_file:
                     update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.MARKDOWN)
                 else:
@@ -1694,17 +1695,23 @@ def info(update: Update, context: CallbackContext) -> None:
             data_identifier = message[1]
             user_info = None
 
-            # Check if it's a user ID or username
+            # Check if it's a user ID
             if data_identifier.isdigit() and data_identifier in data:
-                user_info, coins, join_date = load_user_info(data_identifier, data, koin_data)
+                user_info = data[data_identifier]
+            # Check if it's a username
             elif data_identifier.startswith('@'):
                 username = data_identifier[1:]  # Remove '@'
                 user_info = next((info for uid, info in data.items() if info.get('username') == username), None)
-                if user_info:
-                    user_info, coins, join_date = load_user_info(user_info['id'], data, koin_data)
 
             if user_info:
-                target_user_id = user_info.get('id')
+                target_user_id = user_info.get('id') or next((uid for uid, info in data.items() if info['username'] == user_info['username']), None)
+
+                if not target_user_id:
+                    update.message.reply_text("User ID tidak ditemukan dalam data.")
+                    return
+
+                coins = koin_data.get(target_user_id, {}).get('coins', 'N/A')
+                join_date = koin_data.get(target_user_id, {}).get('join_date', 'N/A')
 
                 caption = (
                     f"━━━━━━━━━━━━━━━━━━\n"
@@ -1715,7 +1722,8 @@ def info(update: Update, context: CallbackContext) -> None:
                     f"*Bergabung :* `{join_date}`\n"
                     f"━━━━━━━━━━━━━━━━━━"
                 )
-                photo_file = fetch_profile_photo(context, target_user_id)
+
+                photo_file = fetch_profile_photo(target_user_id)
                 if photo_file:
                     update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.MARKDOWN)
                 else:
@@ -1736,10 +1744,12 @@ def info(update: Update, context: CallbackContext) -> None:
         replied_user_fullname = update.message.reply_to_message.from_user.full_name
         replied_user_username = update.message.reply_to_message.from_user.username
 
-        # Fetch user info from the message being replied to
-        user_info, coins, join_date = load_user_info(replied_user_id, data, koin_data)
-
+        # Check user data for replied message
+        user_info = data.get(replied_user_id, None)
         if user_info:
+            coins = koin_data.get(replied_user_id, {}).get('coins', 'N/A')
+            join_date = koin_data.get(replied_user_id, {}).get('join_date', 'N/A')
+
             reply_caption = (
                 f"━━━━━━━━━━━━━━━━━━\n"
                 f"*Nama :* `{replied_user_fullname}`\n"
@@ -1749,8 +1759,8 @@ def info(update: Update, context: CallbackContext) -> None:
                 f"*Bergabung :* `{join_date}`\n"
                 f"━━━━━━━━━━━━━━━━━━"
             )
-            # Fetch the profile photo for the user being replied to
-            photo_file = fetch_profile_photo(context, replied_user_id)
+
+            photo_file = fetch_profile_photo(replied_user_id)
             if photo_file:
                 update.message.reply_photo(photo=photo_file, caption=reply_caption, parse_mode=ParseMode.MARKDOWN)
             else:
