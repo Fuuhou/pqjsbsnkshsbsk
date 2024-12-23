@@ -1658,6 +1658,10 @@ def info(update: Update, context: CallbackContext) -> None:
         full_name = update.message.from_user.full_name
         username = update.message.from_user.username
 
+        # Function to escape HTML special characters
+        def escape_html(text):
+            return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
+
         # Function to fetch profile photo
         def fetch_profile_photo(user_id):
             try:
@@ -1675,19 +1679,19 @@ def info(update: Update, context: CallbackContext) -> None:
 
                 caption = (
                     f"━━━━━━━━━━━━━━━━━━\n"
-                    f"*Nama :* `{full_name}`\n"
-                    f"*User ID :* [{user_id}](tg://user?id={user_id})\n"
-                    f"*Username :* @{username}\n"
-                    f"*Saldo Koin :* `{coins}`\n"
-                    f"*Bergabung :* `{join_date}`\n"
+                    f"<b>Nama :</b> {escape_html(full_name)}\n"
+                    f"<b>User ID :</b> <a href='tg://user?id={user_id}'>{user_id}</a>\n"
+                    f"<b>Username :</b> @{escape_html(username)}\n"
+                    f"<b>Saldo Koin :</b> {escape_html(coins)}\n"
+                    f"<b>Bergabung :</b> {escape_html(join_date)}\n"
                     f"━━━━━━━━━━━━━━━━━━"
                 )
 
                 photo_file = fetch_profile_photo(user_id)
                 if photo_file:
-                    update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.MARKDOWN)
+                    update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.HTML)
                 else:
-                    update.message.reply_text(caption, parse_mode=ParseMode.MARKDOWN)
+                    update.message.reply_text(caption, parse_mode=ParseMode.HTML)
             else:
                 update.message.reply_text('Informasi user tidak ditemukan.')
 
@@ -1715,19 +1719,19 @@ def info(update: Update, context: CallbackContext) -> None:
 
                 caption = (
                     f"━━━━━━━━━━━━━━━━━━\n"
-                    f"*Nama :* `{user_info.get('fullname', 'N/A')}`\n"
-                    f"*User ID :* [{target_user_id}](tg://user?id={target_user_id})\n"
-                    f"*Username :* @{user_info.get('username', 'N/A')}\n"
-                    f"*Saldo Koin :* `{coins}`\n"
-                    f"*Bergabung :* `{join_date}`\n"
+                    f"<b>Nama :</b> {escape_html(user_info.get('fullname', 'N/A'))}\n"
+                    f"<b>User ID :</b> <a href='tg://user?id={target_user_id}'>{target_user_id}</a>\n"
+                    f"<b>Username :</b> @{escape_html(user_info.get('username', 'N/A'))}\n"
+                    f"<b>Saldo Koin :</b> {escape_html(coins)}\n"
+                    f"<b>Bergabung :</b> {escape_html(join_date)}\n"
                     f"━━━━━━━━━━━━━━━━━━"
                 )
 
                 photo_file = fetch_profile_photo(target_user_id)
                 if photo_file:
-                    update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.MARKDOWN)
+                    update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.HTML)
                 else:
-                    update.message.reply_text(caption, parse_mode=ParseMode.MARKDOWN)
+                    update.message.reply_text(caption, parse_mode=ParseMode.HTML)
             else:
                 update.message.reply_text("User tidak ditemukan.")
 
@@ -1752,20 +1756,20 @@ def info(update: Update, context: CallbackContext) -> None:
 
             reply_caption = (
                 f"━━━━━━━━━━━━━━━━━━\n"
-                f"*Nama :* `{replied_user_fullname}`\n"
-                f"*User ID :* [{replied_user_id}](tg://user?id={replied_user_id})\n"
-                f"*Username :* @{replied_user_username}\n"
-                f"*Saldo Koin :* `{coins}`\n"
-                f"*Bergabung :* `{join_date}`\n"
+                f"<b>Nama :</b> {escape_html(replied_user_fullname)}\n"
+                f"<b>User ID :</b> <a href='tg://user?id={replied_user_id}'>{replied_user_id}</a>\n"
+                f"<b>Username :</b> @{escape_html(replied_user_username)}\n"
+                f"<b>Saldo Koin :</b> {escape_html(coins)}\n"
+                f"<b>Bergabung :</b> {escape_html(join_date)}\n"
                 f"━━━━━━━━━━━━━━━━━━"
             )
 
             # Send reply message only once
             photo_file = fetch_profile_photo(replied_user_id)
             if photo_file:
-                update.message.reply_photo(photo=photo_file, caption=reply_caption, parse_mode=ParseMode.MARKDOWN)
+                update.message.reply_photo(photo=photo_file, caption=reply_caption, parse_mode=ParseMode.HTML)
             else:
-                update.message.reply_text(reply_caption, parse_mode=ParseMode.MARKDOWN)
+                update.message.reply_text(reply_caption, parse_mode=ParseMode.HTML)
 
         # Ensure that the reply message is not sent again by the code above
         return
