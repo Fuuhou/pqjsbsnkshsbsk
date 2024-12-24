@@ -1708,11 +1708,11 @@ def info(update: Update, context: CallbackContext) -> None:
         def generate_caption(user_info, coin, join_date):
             return (
                 f"━━━━━━━━━━━━━━━━━━\n"
-                f"*Nama :* `{escape_markdown(user_info.get('fullname', 'N/A'))}`\n"
-                f"*User  ID :* [{escape_markdown(user_info.get('id', 'N/A'))}](tg://user?id={escape_markdown(user_info.get('id', 'N/A'))})\n"
-                f"*Username :* @{escape_markdown(user_info.get('username', 'N/A'))}\n"
-                f"*Saldo Coin :* `{escape_markdown(coin)}`\n"
-                f"*Bergabung :* `{escape_markdown(join_date)}`\n"
+                f"*Nama :* `{escape_markdown(str(user_info.get('fullname', 'N/A'))}`\n"
+                f"*User   ID :* [{escape_markdown(str(user_info.get('id', 'N/A')))}](tg://user?id={escape_markdown(str(user_info.get('id', 'N/A')))}\n"
+                f"*Username :* @{escape_markdown(str(user_info.get('username', 'N/A')))}\n"
+                f"*Saldo Coin :* `{escape_markdown(str(coin))}`\n"
+                f"*Bergabung :* `{escape_markdown(str(join_date))}`\n"
                 f"━━━━━━━━━━━━━━━━━━"
             )
 
@@ -1725,8 +1725,8 @@ def info(update: Update, context: CallbackContext) -> None:
                     'id': user_id,
                     'username': username
                 }
-                coin = coin_data.get(user_id, {}).get('coin', 'N/A')
-                join_date = coin_data.get(user_id, {}).get('join_date', 'N/A')
+                coin = str(coin_data.get(user_id, {}).get('coin', 'N/A'))  # Pastikan coin adalah string
+                join_date = str(coin_data.get(user_id, {}).get('join_date', 'N/A'))  # Pastikan join_date adalah string
                 caption = generate_caption(user_info, coin, join_date)
 
                 # Cek dan kirim foto profil
