@@ -801,7 +801,7 @@ def create_vpn(update: Update, context: CallbackContext):
         )
 
 @registered_user_only
-def create_vpn(update: Update, context: CallbackContext):
+def create_vpn_stb(update: Update, context: CallbackContext):
     try:
         # Parse the command message
         message = update.message.text.split()
