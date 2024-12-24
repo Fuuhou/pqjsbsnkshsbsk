@@ -1639,10 +1639,6 @@ def hapus(update: Update, context: CallbackContext):
         update.message.reply_text(f"User dengan ID `{target_user_id}` tidak ditemukan.", parse_mode="Markdown")
 
 @registered_user_only
-import logging
-from telegram import Update, ParseMode
-from telegram.ext import CallbackContext
-
 def info(update: Update, context: CallbackContext) -> None:
     try:
         # Load necessary data
@@ -1654,16 +1650,19 @@ def info(update: Update, context: CallbackContext) -> None:
         full_name = update.message.from_user.full_name
         username = update.message.from_user.username
 
+        # Function to safely escape markdown characters
+        def escape_markdown(text):
+            return text.replace("_", r"\_").replace("*", r"\*").replace("[", r"\[").replace("]", r"\]").replace("(", r"\(").replace(")", r"\)").replace("`", r"\`")
+
         # Function to generate user info caption
         def generate_caption(user_info, coins, join_date):
             return (
                 f"━━━━━━━━━━━━━━━━━━\n"
-                f"*Nama :* `{user_info.get('fullname', 'N/A')}`\n"
-                f"*User ID :* [{user_info.get('id')}]"
-                f"(tg://user?id={user_info.get('id')})\n"
-                f"*Username :* @{user_info.get('username', 'N/A')}\n"
-                f"*Saldo Koin :* `{coins}`\n"
-                f"*Bergabung :* `{join_date}`\n"
+                f"*Nama :* `{escape_markdown(user_info.get('fullname', 'N/A'))}`\n"
+                f"*User ID :* [{escape_markdown(user_info.get('id'))}](tg://user?id={escape_markdown(user_info.get('id'))})\n"
+                f"*Username :* @{escape_markdown(user_info.get('username', 'N/A'))}\n"
+                f"*Saldo Koin :* `{escape_markdown(coins)}`\n"
+                f"*Bergabung :* `{escape_markdown(join_date)}`\n"
                 f"━━━━━━━━━━━━━━━━━━"
             )
 
