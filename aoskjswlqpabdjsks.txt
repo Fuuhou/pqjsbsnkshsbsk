@@ -173,6 +173,26 @@ def save_data_to_github(file_name, data, commit_message):
     except Exception as e:
         logging.error(f"Error updating data on GitHub ({file_name}): {e}")
 
+def load_user_data():
+    user_data = {}
+    if os.path.exists(USER_DATA_PATH):
+        try:
+            with open(USER_DATA_PATH, "r") as file:
+                for line in file:
+                    user_id, username = line.strip().split(maxsplit=1)
+                    user_data[user_id] = username
+        except Exception as e:
+            print(f"Error loading user data: {e}")
+    return user_data
+
+def save_user_data(user_data):
+    try:
+        with open(USER_DATA_PATH, "w") as file:
+            for user_id, username in user_data.items():
+                file.write(f"{user_id} {username}\n")
+    except Exception as e:
+        print(f"Error saving user data: {e}")
+
 def send_notif(chat_id, message, parse_mode='Markdown'):
     payload = {
         'chat_id': chat_id,
@@ -1436,7 +1456,13 @@ def transfer(update: Update, context: CallbackContext):
 
     # Load data for coin and user information
     data = load_data_from_github(FILE_PATH)
-    user_data = load_data_from_github(USER_DATA_PATH)
+
+    # Load user data from user_data.txt (USER_DATA_PATH)
+    try:
+    user_data = load_user_data()
+    except Exception as e:
+        update.message.reply_text(f"Terjadi kesalahan saat memuat data pengguna: {str(e)}")
+        return
 
     # Check if sender exists in the data
     if sender_id not in data:
@@ -1445,7 +1471,7 @@ def transfer(update: Update, context: CallbackContext):
 
     sender_coin = data[sender_id]['coin']
     if sender_coin < coin:
-        update.message.reply_text("coin tidak cukup untuk melakukan transfer.")
+        update.message.reply_text("Coin tidak cukup untuk melakukan transfer.")
         return
 
     # If the target user doesn't exist in the data, initialize their account
@@ -1459,11 +1485,9 @@ def transfer(update: Update, context: CallbackContext):
     # Save the updated data
     save_data_to_github(FILE_PATH, data, "Transfer coin")
 
-    # Fetch full_name and username for both sender and target from user_data
-    sender_full_name = user_data.get(sender_id, {}).get('full_name', 'N/A')
-    sender_username = user_data.get(sender_id, {}).get('username', 'N/A')
-    target_full_name = user_data.get(target_user_id, {}).get('full_name', 'N/A')
-    target_username = user_data.get(target_user_id, {}).get('username', 'N/A')
+    # Fetch username for both sender and target from user_data
+    sender_username = user_data.get(sender_id, 'N/A')
+    target_username = user_data.get(target_user_id, 'N/A')
 
     # Compose the transfer message in the requested format
     tf_msg = (
@@ -1471,14 +1495,12 @@ def transfer(update: Update, context: CallbackContext):
         f"  *✰* 𝗧𝗥𝗔𝗡𝗦𝗙𝗘𝗥 *✰*\n"
         f"━━━━━━━━━━━━━━━━━━\n"
         f"*❃ Pengirim*\n"
-        f"*⋗ Nama :* `{sender_full_name}`\n"
-        f"*⋗ User ID :* [{sender_id}](tg://user?id={sender_id})\n"
         f"*⋗ Username :* @{sender_username}\n"
+        f"*⋗ User ID :* [{sender_id}](tg://user?id={sender_id})\n"
         f"━━\n"
         f"*❃ Penerima*\n"
-        f"*⋗ Nama :* `{target_full_name}`\n"
-        f"*⋗ User ID :* [{target_user_id}](tg://user?id={target_user_id})\n"
         f"*⋗ Username :* @{target_username}\n"
+        f"*⋗ User ID :* [{target_user_id}](tg://user?id={target_user_id})\n"
         f"━━\n"
         f"*⋗ Jumlah coin :* `{coin}`\n"
         f"*⋗ Tanggal :* `{datetime.now().strftime('%d-%m-%Y %H:%M')} WIB`\n"
@@ -1506,20 +1528,25 @@ def topup_coin(update: Update, context: CallbackContext):
     coin = int(coin)
     user_id = str(update.effective_user.id)
 
-    # Load user data
+    # Load data for coin and user information
     data = load_data_from_github(FILE_PATH)
-    user_data = load_data_from_github(USER_DATA_PATH)
+
+    # Load user data from user_data.txt (USER_DATA_PATH)
+    try:
+    user_data = load_user_data()
+    except Exception as e:
+        update.message.reply_text(f"Terjadi kesalahan saat memuat data pengguna: {str(e)}")
+        return
 
     # Ensure the target user exists in the data
     data.setdefault(target_user_id, {'coin': 0, 'join_date': datetime.now().strftime('%d-%m-%Y')})
     data[target_user_id]['coin'] += coin
 
-    # Save updated data
+    # Save the updated data
     save_data_to_github(FILE_PATH, data, "Top-up coin")
 
-    # Fetch full_name and username from user_data
-    full_name = user_data.get(target_user_id, {}).get('fullname', 'N/A')
-    username = user_data.get(target_user_id, {}).get('username', 'N/A')
+    # Fetch username from user_data
+    username = user_data.get(target_user_id, 'N/A')
 
     # Compose the top-up message
     topup_msg = (
@@ -1527,7 +1554,7 @@ def topup_coin(update: Update, context: CallbackContext):
         f"  *✰* 𝗧𝗢𝗣 𝗨𝗣 *✰*\n"
         f"━━━━━━━━━━━━━━━━━━\n"
         f"*⋗ Isi Coin :* `{coin}`\n"
-        f"*⋗ Nama :* `{full_name}`\n"
+        f"*⋗ Username :* @{username}\n"
         f"*⋗ User ID :* [{target_user_id}](tg://user?id={target_user_id})\n"
         f"*⋗ Saldo Coin :* `{data[target_user_id]['coin']}`\n"
         f"*⋗ Tanggal :* `{datetime.now().strftime('%d-%m-%Y %H:%M')} WIB`\n"
@@ -1569,14 +1596,20 @@ def reduce_coin(update: Update, context: CallbackContext):
     # Load data pengguna
     try:
         data = load_data_from_github(FILE_PATH)
-        user_data = load_data_from_github(USER_DATA_PATH)
     except Exception as e:
         update.message.reply_text(f"Terjadi kesalahan saat memuat data: {str(e)}")
         return
 
+    # Load user data dari user_data.txt (USER_DATA_PATH)
+    try:
+        user_data = load_user_data()
+    except Exception as e:
+        update.message.reply_text(f"Terjadi kesalahan saat memuat data pengguna: {str(e)}")
+        return
+
     # Pastikan pengguna target ada dalam data
     if target_user_id not in data:
-        update.message.reply_text("User ID yang diminta tidak ditemukan.")
+        update.message.reply_text("User  ID yang diminta tidak ditemukan.")
         return
     
     # Pastikan saldo coin cukup
@@ -1595,8 +1628,7 @@ def reduce_coin(update: Update, context: CallbackContext):
         return
 
     # Ambil data pengguna untuk detail informasi
-    full_name = user_data.get(target_user_id, {}).get('fullname', 'N/A')
-    username = user_data.get(target_user_id, {}).get('username', 'N/A')
+    username = user_data.get(target_user_id, 'N/A')
 
     # Pesan konfirmasi pengurangan coin
     reduce_msg = (
@@ -1604,7 +1636,6 @@ def reduce_coin(update: Update, context: CallbackContext):
         f"  *✰* 𝗥𝗘𝗗𝗨𝗖𝗘 𝗞𝗢𝗜𝗡 *✰*\n"
         f"━━━━━━━━━━━━━━━━━━\n"
         f"*⋗ Pengurangan coin :* `{coin}`\n"
-        f"*⋗ Nama :* `{full_name}`\n"
         f"*⋗ Username :* @{username}\n"
         f"*⋗ User ID :* [{target_user_id}](tg://user?id={target_user_id})\n"
         f"*⋗ Sisa Saldo coin :* `{data[target_user_id]['coin']}`\n"
@@ -1641,8 +1672,14 @@ def hapus(update: Update, context: CallbackContext):
 @registered_user_only
 def info(update: Update, context: CallbackContext) -> None:
     try:
-        # Load necessary data
-        data = load_data_from_github(USER_DATA_PATH)  # User data
+        # Memuat data pengguna dari user_data.txt
+        try:
+            user_data = load_user_data()
+        except Exception as e:
+            update.message.reply_text(f"Terjadi kesalahan saat memuat data pengguna: {str(e)}")
+            return
+
+        # Memuat data coin dari FILE_PATH
         coin_data = load_data_from_github(FILE_PATH)  # coin data
 
         message = update.message.text.split()
@@ -1670,13 +1707,18 @@ def info(update: Update, context: CallbackContext) -> None:
 
         # User requested their own info
         if len(message) == 1:
-            if user_id in data:
-                user_info = data[user_id]
+            if user_id in coin_data:
+                # Mengambil data pengguna
+                user_info = {
+                    'fullname': full_name,
+                    'id': user_id,
+                    'username': username
+                }
                 coin = coin_data.get(user_id, {}).get('coin', 'N/A')
                 join_date = coin_data.get(user_id, {}).get('join_date', 'N/A')
                 caption = generate_caption(user_info, coin, join_date)
 
-                # Check and send profile photo
+                # Cek dan kirim foto profil
                 profile_photos = context.bot.get_user_profile_photos(user_id)
                 if profile_photos.total_count > 0:
                     photo_file = profile_photos.photos[0][-1].file_id
@@ -1691,16 +1733,16 @@ def info(update: Update, context: CallbackContext) -> None:
             data_identifier = message[1]
             user_info = None
 
-            # Check if it's a user ID
-            if data_identifier.isdigit() and data_identifier in data:
-                user_info = data[data_identifier]
-            # Check if it's a username
+            # Cek apakah ini adalah user ID
+            if data_identifier.isdigit() and data_identifier in coin_data:
+                user_info = {'id': data_identifier, 'username': user_data.get(data_identifier, 'N/A')}
+            # Cek apakah ini adalah username
             elif data_identifier.startswith('@'):
-                username = data_identifier[1:]  # Remove '@'
-                user_info = next((info for uid, info in data.items() if info.get('username') == username), None)
+                username = data_identifier[1:]  # Hapus '@'
+                user_info = next(({'id': uid, 'username': username} for uid, uname in user_data.items() if uname == username), None)
 
             if user_info:
-                target_user_id = user_info.get('id') or next((uid for uid, info in data.items() if info['username'] == user_info['username']), None)
+                target_user_id = user_info.get('id')
 
                 if not target_user_id:
                     update.message.reply_text("User ID tidak ditemukan dalam data.")
@@ -1711,7 +1753,7 @@ def info(update: Update, context: CallbackContext) -> None:
                 caption = generate_caption(user_info, coin, join_date)
 
                 try:
-                    # Try to fetch the user's profile photo
+                    # Coba ambil foto profil pengguna
                     profile_photos = context.bot.get_user_profile_photos(target_user_id)
                     if profile_photos.total_count > 0:
                         photo_file = profile_photos.photos[0][-1].file_id
@@ -1821,23 +1863,25 @@ def admin_command(update: Update, context: CallbackContext) -> None:
 
 def start(update: Update, context: CallbackContext) -> None:
     user = update.effective_user
-    user_id = user.id
+    user_id = str(user.id)
     username = user.username
-    fullname = user.full_name
-    
+
     # Load existing user data
-    user_data = load_data_from_github(USER_DATA_PATH)
+    user_data = load_user_data()
 
     # Check if user is already in the data
-    if str(user_id) not in user_data:
+    if user_id not in user_data:
         # Add new user data
-        user_data[str(user_id)] = {
-            'username': username,
-            'fullname': fullname
-        }
-        # Save user data
-        save_data_to_github(USER_DATA_PATH, user_data, "Add new user data")
-    
+        user_data[user_id] = username
+        # Save user data to file
+        save_user_data(user_data)
+
+    # If username has changed, update it
+    elif user_data[user_id] != username:
+        user_data[user_id] = username
+        # Save updated user data to file
+        save_user_data(user_data)
+
     welcome_message = """
     Selamat datang di *BOT XIESTORE*, ketik /menu untuk lihat daftar perintah.
     """
