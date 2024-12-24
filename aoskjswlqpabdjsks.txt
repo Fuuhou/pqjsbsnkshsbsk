@@ -1709,7 +1709,7 @@ def info(update: Update, context: CallbackContext) -> None:
             return (
                 f"━━━━━━━━━━━━━━━━━━\n"
                 f"*Nama :* `{escape_markdown(str(user_info.get('fullname', 'N/A'))}`\n"
-                f"*User   ID :* [{escape_markdown(str(user_info.get('id', 'N/A')))}](tg://user?id={escape_markdown(str(user_info.get('id', 'N/A')))}\n"
+                f"*User  ID :* [{escape_markdown(str(user_info.get('id', 'N/A')))}](tg://user?id={escape_markdown(str(user_info.get('id', 'N/A')))}\n"
                 f"*Username :* @{escape_markdown(str(user_info.get('username', 'N/A')))}\n"
                 f"*Saldo Coin :* `{escape_markdown(str(coin))}`\n"
                 f"*Bergabung :* `{escape_markdown(str(join_date))}`\n"
