@@ -1866,6 +1866,7 @@ def admin_command(update: Update, context: CallbackContext) -> None:
 /trialz - trial vpn
 /hapus - hapus user
 /change - ubah stok
+/share - share info all
 /delvpn - hapus vpn user
 /cek_stock - cek server stok
 /del_stock - hapus stok
@@ -2578,6 +2579,46 @@ def reminder_expired_vpn_data() -> None:
     except Exception as e:
         logger.error(f'Error while sending notifications for expired VPN data: {str(e)}')
 
+@admin_only
+def share_message(update: Update, context: CallbackContext):
+    user_id = str(update.effective_user.id)
+    message = update.message
+
+    # Memastikan pengguna membalas pesan saat menggunakan perintah /share
+    if not message.reply_to_message:
+        update.message.reply_text("Gunakan perintah ini dengan membalas pesan yang ingin dibagikan.")
+        return
+
+    # Memuat data user ID yang terdaftar
+    try:
+        data = load_data_from_github(FILE_PATH)
+    except Exception as e:
+        update.message.reply_text(f"Terjadi kesalahan saat memuat data: {str(e)}")
+        return
+
+    # Mengecek apakah ada user ID dalam data
+    if not data:
+        update.message.reply_text("Tidak ada user ID yang terdaftar untuk menerima pesan.")
+        return
+
+    # Mengambil semua user ID dari data
+    user_ids = list(data.keys())
+
+    # Mengirim pesan ke setiap user ID
+    for target_user_id in user_ids:
+        try:
+            context.bot.forward_message(
+                chat_id=target_user_id,
+                from_chat_id=message.chat_id,
+                message_id=message.reply_to_message.message_id
+            )
+        except Exception as e:
+            update.message.reply_text(f"Gagal mengirim pesan ke {target_user_id}: {str(e)}")
+
+    update.message.reply_text("Pesan berhasil dibagikan ke semua user yang terdaftar.")
+
+
+
 def main():
     if not TOKEN_BOT:
         logger.error("Variabel lingkungan TOKEN_BOT tidak diatur.")
@@ -2614,6 +2655,7 @@ def main():
     dp.add_handler(CommandHandler('cek_host', cek_host))
     dp.add_handler(CommandHandler('list', list_user_accounts))
     dp.add_handler(CommandHandler('delvpn', delete_vpn))
+    dp.add_handler(CommandHandler('share', share_message))
 
     # Scheduler to check for expired accounts daily
     scheduler = BackgroundScheduler()
