@@ -1652,6 +1652,8 @@ def info(update: Update, context: CallbackContext) -> None:
 
         # Function to safely escape markdown characters
         def escape_markdown(text):
+            if text is None:
+                return ""  # Return empty string if text is None
             return text.replace("_", r"\_").replace("*", r"\*").replace("[", r"\[").replace("]", r"\]").replace("(", r"\(").replace(")", r"\)").replace("`", r"\`")
 
         # Function to generate user info caption
@@ -1659,7 +1661,7 @@ def info(update: Update, context: CallbackContext) -> None:
             return (
                 f"━━━━━━━━━━━━━━━━━━\n"
                 f"*Nama :* `{escape_markdown(user_info.get('fullname', 'N/A'))}`\n"
-                f"*User ID :* [{escape_markdown(user_info.get('id'))}](tg://user?id={escape_markdown(user_info.get('id'))})\n"
+                f"*User ID :* [{escape_markdown(user_info.get('id', 'N/A'))}](tg://user?id={escape_markdown(user_info.get('id', 'N/A'))})\n"
                 f"*Username :* @{escape_markdown(user_info.get('username', 'N/A'))}\n"
                 f"*Saldo Koin :* `{escape_markdown(coins)}`\n"
                 f"*Bergabung :* `{escape_markdown(join_date)}`\n"
