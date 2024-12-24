@@ -1639,8 +1639,13 @@ def hapus(update: Update, context: CallbackContext):
         update.message.reply_text(f"User dengan ID `{target_user_id}` tidak ditemukan.", parse_mode="Markdown")
 
 @registered_user_only
+import logging
+from telegram import Update, ParseMode
+from telegram.ext import CallbackContext
+
 def info(update: Update, context: CallbackContext) -> None:
     try:
+        # Load necessary data
         data = load_data_from_github(USER_DATA_PATH)  # User data
         koin_data = load_data_from_github(FILE_PATH)  # Coin data
 
@@ -1649,21 +1654,28 @@ def info(update: Update, context: CallbackContext) -> None:
         full_name = update.message.from_user.full_name
         username = update.message.from_user.username
 
-        if len(message) == 1:  # User requested their own info
+        # Function to generate user info caption
+        def generate_caption(user_info, coins, join_date):
+            return (
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"*Nama :* `{user_info.get('fullname', 'N/A')}`\n"
+                f"*User ID :* [{user_info.get('id')}]"
+                f"(tg://user?id={user_info.get('id')})\n"
+                f"*Username :* @{user_info.get('username', 'N/A')}\n"
+                f"*Saldo Koin :* `{coins}`\n"
+                f"*Bergabung :* `{join_date}`\n"
+                f"━━━━━━━━━━━━━━━━━━"
+            )
+
+        # User requested their own info
+        if len(message) == 1:
             if user_id in data:
+                user_info = data[user_id]
                 coins = koin_data.get(user_id, {}).get('coins', 'N/A')
                 join_date = koin_data.get(user_id, {}).get('join_date', 'N/A')
+                caption = generate_caption(user_info, coins, join_date)
 
-                caption = (
-                    f"━━━━━━━━━━━━━━━━━━\n"
-                    f"*Nama :* `{full_name}`\n"
-                    f"*User ID :* [{user_id}](tg://user?id={user_id})\n"
-                    f"*Username :* @{username}\n"
-                    f"*Saldo Koin :* `{coins}`\n"
-                    f"*Bergabung :* `{join_date}`\n"
-                    f"━━━━━━━━━━━━━━━━━━"
-                )
-
+                # Check and send profile photo
                 profile_photos = context.bot.get_user_profile_photos(user_id)
                 if profile_photos.total_count > 0:
                     photo_file = profile_photos.photos[0][-1].file_id
@@ -1673,7 +1685,8 @@ def info(update: Update, context: CallbackContext) -> None:
             else:
                 update.message.reply_text('Informasi user tidak ditemukan.')
 
-        elif len(message) == 2:  # User requested info for another user
+        # User requested info for another user
+        elif len(message) == 2:
             data_identifier = message[1]
             user_info = None
 
@@ -1694,18 +1707,10 @@ def info(update: Update, context: CallbackContext) -> None:
 
                 coins = koin_data.get(target_user_id, {}).get('coins', 'N/A')
                 join_date = koin_data.get(target_user_id, {}).get('join_date', 'N/A')
-
-                caption = (
-                    f"━━━━━━━━━━━━━━━━━━\n"
-                    f"*Nama :* `{user_info.get('fullname', 'N/A')}`\n"
-                    f"*User ID :* [{target_user_id}](tg://user?id={target_user_id})\n"
-                    f"*Username :* @{user_info.get('username', 'N/A')}\n"
-                    f"*Saldo Koin :* `{coins}`\n"
-                    f"*Bergabung :* `{join_date}`\n"
-                    f"━━━━━━━━━━━━━━━━━━"
-                )
+                caption = generate_caption(user_info, coins, join_date)
 
                 try:
+                    # Try to fetch the user's profile photo
                     profile_photos = context.bot.get_user_profile_photos(target_user_id)
                     if profile_photos.total_count > 0:
                         photo_file = profile_photos.photos[0][-1].file_id
