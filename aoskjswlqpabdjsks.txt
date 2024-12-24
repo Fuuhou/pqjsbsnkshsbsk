@@ -1698,21 +1698,25 @@ def info(update: Update, context: CallbackContext) -> None:
         full_name = update.message.from_user.full_name
         username = update.message.from_user.username
 
-        # Function to safely escape markdown characters
-        def escape_markdown(text):
+        # Function to safely escape HTML characters
+        def escape_html(text):
             if text is None:
                 return ""  # Return empty string if text is None
-            return text.replace("_", r"\_").replace("*", r"\*").replace("[", r"\[").replace("]", r"\]").replace("(", r"\(").replace(")", r"\)").replace("`", r"\`")
+            return (text.replace("&", "&amp;")
+                        .replace("<", "&lt;")
+                        .replace(">", "&gt;")
+                        .replace('"', "&quot;")
+                        .replace("'", "&#39;"))
 
         # Function to generate user info caption
         def generate_caption(user_info, coin, join_date):
             return (
                 f"━━━━━━━━━━━━━━━━━━\n"
-                f"*Nama :* `{escape_markdown(str(user_info.get('fullname', 'N/A'))}`\n"
-                f"*User  ID :* [{escape_markdown(str(user_info.get('id', 'N/A')))}](tg://user?id={escape_markdown(str(user_info.get('id', 'N/A')))}\n"
-                f"*Username :* @{escape_markdown(str(user_info.get('username', 'N/A')))}\n"
-                f"*Saldo Coin :* `{escape_markdown(str(coin))}`\n"
-                f"*Bergabung :* `{escape_markdown(str(join_date))}`\n"
+                f"<b>Nama :</b> <code>{escape_html(str(user_info.get('fullname', 'N/A')))}</code>\n"
+                f"<b>User ID :</b> <a href='tg://user?id={escape_html(str(user_info.get('id', 'N/A')))}'>{escape_html(str(user_info.get('id', 'N/A')))}</a>\n"
+                f"<b>Username :</b> @{escape_html(str(user_info.get('username', 'N/A')))}\n"
+                f"<b>Saldo Coin :</b> <code>{escape_html(str(coin))}</code>\n"
+                f"<b>Bergabung :</b> <code>{escape_html(str(join_date))}</code>\n"
                 f"━━━━━━━━━━━━━━━━━━"
             )
 
@@ -1733,9 +1737,9 @@ def info(update: Update, context: CallbackContext) -> None:
                 profile_photos = context.bot.get_user_profile_photos(user_id)
                 if profile_photos.total_count > 0:
                     photo_file = profile_photos.photos[0][-1].file_id
-                    update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.MARKDOWN)
+                    update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.HTML)
                 else:
-                    update.message.reply_text(caption, parse_mode=ParseMode.MARKDOWN)
+                    update.message.reply_text(caption, parse_mode=ParseMode.HTML)
             else:
                 update.message.reply_text('Informasi user tidak ditemukan.')
 
@@ -1768,9 +1772,9 @@ def info(update: Update, context: CallbackContext) -> None:
                     profile_photos = context.bot.get_user_profile_photos(target_user_id)
                     if profile_photos.total_count > 0:
                         photo_file = profile_photos.photos[0][-1].file_id
-                        update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.MARKDOWN)
+                        update.message.reply_photo(photo=photo_file, caption=caption, parse_mode=ParseMode.HTML)
                     else:
-                        update.message.reply_text(caption, parse_mode=ParseMode.MARKDOWN)
+                        update.message.reply_text(caption, parse_mode=ParseMode.HTML)
                 except Exception as e:
                     logging.error(f'Error fetching profile photo for {target_user_id}: {str(e)}')
                     update.message.reply_text("Gagal mengambil foto profil pengguna.")
