@@ -812,7 +812,7 @@ def create_vpn_stb(update: Update, context: CallbackContext):
         if len(message) < 5:
             context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
             update.message.reply_text(
-                'Format perintah salah. Gunakan: /create <server> <tipe_vpn> <username> <days> atau /create <server> ssh <username> <password> <days>'
+                'Format perintah salah. Gunakan: /create_stb <server> <tipe_vpn> <username> <days> atau /create_stb <server> ssh <username> <password> <days>'
             )
             return
 
@@ -843,7 +843,7 @@ def create_vpn_stb(update: Update, context: CallbackContext):
         if vpn_type == "ssh":
             if len(message) < 6:
                 context.bot.delete_message(chat_id=update.effective_chat.id, message_id=waiting_message.message_id)
-                update.message.reply_text('Format salah! Untuk SSH, gunakan /create <server> ssh <username> <password> <days>.')
+                update.message.reply_text('Format salah! Untuk SSH, gunakan /create_stb <server> ssh <username> <password> <days>.')
                 return
             username = message[3]
             password = message[4]
