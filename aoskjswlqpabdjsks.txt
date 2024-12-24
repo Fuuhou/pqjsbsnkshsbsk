@@ -1441,55 +1441,62 @@ def trial_vpn_admin(update, context):
 
 @registered_user_only
 def transfer(update: Update, context: CallbackContext):
+    # Memisahkan pesan yang diterima
     message = update.message.text.split()
+    
+    # Memeriksa format perintah
     if len(message) != 3:
         update.message.reply_text("Format salah. Gunakan perintah: /transfer <user_id_tujuan> <jumlah_coin>")
         return
 
-    target_user_id, coin = message[1], message[2]
-    if not coin.isdigit():
+    target_user_id, coin_str = message[1], message[2]
+    
+    # Memeriksa apakah jumlah coin adalah angka
+    if not coin_str.isdigit():
         update.message.reply_text("Jumlah coin harus berupa angka.")
         return
 
-    coin = int(coin)
+    coin = int(coin_str)
     sender_id = str(update.effective_user.id)
 
-    # Load data for coin and user information
+    # Memuat data untuk informasi coin dan pengguna
     data = load_data_from_github(FILE_PATH)
 
-    # Load user data from user_data.txt (USER_DATA_PATH)
+    # Memuat data pengguna dari user_data.txt (USER_DATA_PATH)
     try:
-    user_data = load_user_data()
+        user_data = load_user_data()
     except Exception as e:
         update.message.reply_text(f"Terjadi kesalahan saat memuat data pengguna: {str(e)}")
         return
 
-    # Check if sender exists in the data
+    # Memeriksa apakah pengirim ada dalam data
     if sender_id not in data:
-        update.message.reply_text("User ID pengirim tidak ditemukan.")
+        update.message.reply_text("User  ID pengirim tidak ditemukan.")
         return
 
     sender_coin = data[sender_id]['coin']
+    
+    # Memeriksa apakah pengirim memiliki cukup coin untuk transfer
     if sender_coin < coin:
         update.message.reply_text("Coin tidak cukup untuk melakukan transfer.")
         return
 
-    # If the target user doesn't exist in the data, initialize their account
+    # Jika pengguna tujuan tidak ada dalam data, inisialisasi akun mereka
     if target_user_id not in data:
         data[target_user_id] = {'coin': 0, 'join_date': datetime.now().strftime('%d-%m-%Y')}
 
-    # Deduct coin from sender and add to the target user
+    # Mengurangi coin dari pengirim dan menambahkannya ke pengguna tujuan
     data[sender_id]['coin'] -= coin
     data[target_user_id]['coin'] += coin
 
-    # Save the updated data
+    # Menyimpan data yang diperbarui
     save_data_to_github(FILE_PATH, data, "Transfer coin")
 
-    # Fetch username for both sender and target from user_data
+    # Mengambil username untuk pengirim dan penerima dari user_data
     sender_username = user_data.get(sender_id, 'N/A')
     target_username = user_data.get(target_user_id, 'N/A')
 
-    # Compose the transfer message in the requested format
+    # Menyusun pesan transfer dalam format yang diminta
     tf_msg = (
         f"━━━━━━━━━━━━━━━━━━\n"
         f"  *✰* 𝗧𝗥𝗔𝗡𝗦𝗙𝗘𝗥 *✰*\n"
@@ -1508,7 +1515,7 @@ def transfer(update: Update, context: CallbackContext):
         f"🏬 *@xiestorez*"
     )
 
-    # Log the transfer transaction and notify both users
+    # Mencatat transaksi transfer dan memberi tahu kedua pengguna
     record_and_notify(sender_id, f"Transfer {coin} coin ke {target_user_id}")
     update.message.reply_text(tf_msg, parse_mode=ParseMode.MARKDOWN)
     context.bot.send_message(chat_id=target_user_id, text=tf_msg, parse_mode=ParseMode.MARKDOWN)
@@ -1516,39 +1523,43 @@ def transfer(update: Update, context: CallbackContext):
 @admin_only
 def topup_coin(update: Update, context: CallbackContext):
     message = update.message.text.split()
+    
+    # Memeriksa format perintah
     if len(message) != 3:
         update.message.reply_text("Gunakan perintah dengan format: /topup <user_id> <jumlah_coin>")
         return
 
-    target_user_id, coin = message[1], message[2]
-    if not coin.isdigit():
+    target_user_id, coin_str = message[1], message[2]
+    
+    # Memeriksa apakah jumlah coin adalah angka
+    if not coin_str.isdigit():
         update.message.reply_text("Jumlah coin harus berupa angka.")
         return
 
-    coin = int(coin)
+    coin = int(coin_str)
     user_id = str(update.effective_user.id)
 
-    # Load data for coin and user information
+    # Memuat data untuk informasi coin dan pengguna
     data = load_data_from_github(FILE_PATH)
 
-    # Load user data from user_data.txt (USER_DATA_PATH)
+    # Memuat data pengguna dari user_data.txt (USER_DATA_PATH)
     try:
-    user_data = load_user_data()
+        user_data = load_user_data()  # Pastikan baris ini terindentasi dengan benar
     except Exception as e:
         update.message.reply_text(f"Terjadi kesalahan saat memuat data pengguna: {str(e)}")
         return
 
-    # Ensure the target user exists in the data
+    # Memastikan pengguna tujuan ada dalam data
     data.setdefault(target_user_id, {'coin': 0, 'join_date': datetime.now().strftime('%d-%m-%Y')})
     data[target_user_id]['coin'] += coin
 
-    # Save the updated data
+    # Menyimpan data yang diperbarui
     save_data_to_github(FILE_PATH, data, "Top-up coin")
 
-    # Fetch username from user_data
+    # Mengambil username dari user_data
     username = user_data.get(target_user_id, 'N/A')
 
-    # Compose the top-up message
+    # Menyusun pesan top-up
     topup_msg = (
         f"━━━━━━━━━━━━━━━━━━\n"
         f"  *✰* 𝗧𝗢𝗣 𝗨𝗣 *✰*\n"
@@ -1562,7 +1573,7 @@ def topup_coin(update: Update, context: CallbackContext):
         f"🏬 *@xiestorez*"
     )
 
-    # Log the top-up transaction and notify the user
+    # Mencatat transaksi top-up dan memberi tahu pengguna
     record_and_notify(user_id, f"Top-up {coin} Coin ke {target_user_id}")
     update.message.reply_text(topup_msg, parse_mode=ParseMode.MARKDOWN)
     context.bot.send_message(chat_id=target_user_id, text=topup_msg, parse_mode=ParseMode.MARKDOWN)
@@ -1576,14 +1587,14 @@ def reduce_coin(update: Update, context: CallbackContext):
         update.message.reply_text("Gunakan perintah dengan format: /reduce <user_id> <jumlah_coin>")
         return
 
-    target_user_id, coin = message[1], message[2]
+    target_user_id, coin_str = message[1], message[2]
     
     # Validasi apakah jumlah coin adalah angka
-    if not coin.isdigit():
+    if not coin_str.isdigit():
         update.message.reply_text("Jumlah coin harus berupa angka.")
         return
 
-    coin = int(coin)
+    coin = int(coin_str)
     
     # Jika jumlah coin yang diminta lebih besar dari saldo, kirimkan pesan error
     if coin <= 0:
@@ -1680,7 +1691,7 @@ def info(update: Update, context: CallbackContext) -> None:
             return
 
         # Memuat data coin dari FILE_PATH
-        coin_data = load_data_from_github(FILE_PATH)  # coin data
+        coin_data = load_data_from_github(FILE_PATH)
 
         message = update.message.text.split()
         user_id = str(update.message.from_user.id)
@@ -1698,7 +1709,7 @@ def info(update: Update, context: CallbackContext) -> None:
             return (
                 f"━━━━━━━━━━━━━━━━━━\n"
                 f"*Nama :* `{escape_markdown(user_info.get('fullname', 'N/A'))}`\n"
-                f"*User ID :* [{escape_markdown(user_info.get('id', 'N/A'))}](tg://user?id={escape_markdown(user_info.get('id', 'N/A'))})\n"
+                f"*User  ID :* [{escape_markdown(user_info.get('id', 'N/A'))}](tg://user?id={escape_markdown(user_info.get('id', 'N/A'))})\n"
                 f"*Username :* @{escape_markdown(user_info.get('username', 'N/A'))}\n"
                 f"*Saldo Coin :* `{escape_markdown(coin)}`\n"
                 f"*Bergabung :* `{escape_markdown(join_date)}`\n"
@@ -1745,7 +1756,7 @@ def info(update: Update, context: CallbackContext) -> None:
                 target_user_id = user_info.get('id')
 
                 if not target_user_id:
-                    update.message.reply_text("User ID tidak ditemukan dalam data.")
+                    update.message.reply_text("User  ID tidak ditemukan dalam data.")
                     return
 
                 coin = coin_data.get(target_user_id, {}).get('coin', 'N/A')
@@ -1764,7 +1775,7 @@ def info(update: Update, context: CallbackContext) -> None:
                     logging.error(f'Error fetching profile photo for {target_user_id}: {str(e)}')
                     update.message.reply_text("Gagal mengambil foto profil pengguna.")
             else:
-                update.message.reply_text("User tidak ditemukan.")
+                update.message.reply_text("User  tidak ditemukan.")
 
         else:
             update.message.reply_text("Gunakan perintah dengan format: /info <user_id/@username>")
