@@ -417,7 +417,7 @@ def gift(update: Update, context: CallbackContext):
         f"*By :* [{fullname}](tg://user?id={user_id})\n"
         f"*Expired :* `{expiration_date} WIB`\n"
         f"━━━━━━━━━━━━━━━━━━\n"
-        f"🤖 *@superzoybot*", parse_mode="Markdown"
+        f"🏬 *@xiestorez*", parse_mode="Markdown"
     )
 
 def redeem(update: Update, context: CallbackContext):
@@ -479,7 +479,7 @@ def gift_cek(update: Update, context: CallbackContext):
         f"*Expired :* `{expiration_time} WIB`\n"
         f"*Redeemed By:*\n{redeem_info}\n"
         f"━━━━━━━━━━━━━━━━━━\n"
-        f"🤖 *@superzoybot*", parse_mode="Markdown"
+        f"🏬 *@xiestorez*", parse_mode="Markdown"
     )
 
 @registered_user_only
@@ -1082,7 +1082,7 @@ def format_output(vpn_type, output, provider_name, username):
             else:
                 formatted_output += line + "\n"
 
-    formatted_output += "🤖 *@superzoybot*"
+    formatted_output += "🏬 *@xiestorez*"
     return formatted_output
 
 def is_vpn_expired(user_id, username, vpn_type, expired_data):
@@ -1483,7 +1483,7 @@ def transfer(update: Update, context: CallbackContext):
         f"*⋗ Jumlah credit :* `{credit}`\n"
         f"*⋗ Tanggal :* `{datetime.now().strftime('%d-%m-%Y %H:%M')} WIB`\n"
         f"━━━━━━━━━━━━━━━━━━\n"
-        f"🤖 *@superzoybot*"
+        f"🏬 *@xiestorez*"
     )
 
     # Log the transfer transaction and notify both users
@@ -1532,7 +1532,7 @@ def topup_credit(update: Update, context: CallbackContext):
         f"*⋗ Saldo credit :* `{data[target_user_id]['credit']}`\n"
         f"*⋗ Tanggal :* `{datetime.now().strftime('%d-%m-%Y %H:%M')} WIB`\n"
         f"━━━━━━━━━━━━━━━━━━\n"
-        f"🤖 *@superzoybot*"
+        f"🏬 *@xiestorez*"
     )
 
     # Log the top-up transaction and notify the user
@@ -1610,7 +1610,7 @@ def reduce_credit(update: Update, context: CallbackContext):
         f"*⋗ Sisa Saldo credit :* `{data[target_user_id]['credit']}`\n"
         f"*⋗ Tanggal :* `{datetime.now().strftime('%d-%m-%Y %H:%M')} WIB`\n"
         f"━━━━━━━━━━━━━━━━━━\n"
-        f"🤖 *@superzoybot*"
+        f"🏬 *@xiestorez*"
     )
 
     # Log transaksi pengurangan credit dan beri notifikasi
