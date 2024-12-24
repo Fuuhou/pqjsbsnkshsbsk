@@ -2190,7 +2190,7 @@ def list_user_accounts(update: Update, context: CallbackContext) -> None:
         # Load combined VPN data from a single path
         vpn_data = load_data_from_github(AKUN_VPN_PATH)
 
-        message = f"📋 𝐃𝐚𝐟𝐭𝐚𝐫 𝐀𝐤𝐮𝐧 𝐕𝐏𝐍 𝐮𝐧𝐭𝐮𝐤 𝐔𝐬𝐞𝐫 𝐈𝐃 {user_id}\n"
+        message = f"📋 𝗗𝗮𝗳𝘁𝗮𝗿 𝗔𝗸𝘂𝗻 𝗩𝗣𝗡 𝗨𝘀𝗲𝗿 𝗜𝗗 {user_id}\n"
         message += "━━━━━━━━━━━━━━━━━━\n"
 
         ssh_count = 0
@@ -2202,35 +2202,35 @@ def list_user_accounts(update: Update, context: CallbackContext) -> None:
             # Process SSH accounts
             ssh_accounts = [entry for entry in vpn_data[user_id] if entry.get('vpn_type') == 'ssh']
             if ssh_accounts:
-                message += "🌐 𝐀𝐤𝐮𝐧 𝐒𝐒𝐇\n━━━━━━━━━━━━━━━━━━\n"
+                message += "🌐 𝗔𝗸𝘂𝗻 𝗦𝗦𝗛\n━━━━━━━━━━━━━━━━━━\n"
                 for entry in ssh_accounts:
                     ssh_count += 1
                     message += format_account_info(entry)
             else:
-                message += "📛 𝐓𝐢𝐝𝐚𝐤 𝐚𝐝𝐚 𝐚𝐤𝐮𝐧 𝐒𝐒𝐇 𝐲𝐚𝐧𝐠 𝐭𝐞𝐫𝐝𝐚𝐟𝐭𝐚𝐫.\n━━━━━━━━━━━━━━━━━━\n"
+                message += "📛 𝘁𝗶𝗱𝗮𝗸 𝗮𝗱𝗮 𝗮𝗸𝘂𝗻 𝗦𝗦𝗛 𝘆𝗮𝗻𝗴 𝘁𝗲𝗿𝗱𝗮𝗳𝘁𝗮𝗿.\n━━━━━━━━━━━━━━━━━━\n"
 
             # Process Xray accounts
             xray_accounts = [entry for entry in vpn_data[user_id] if entry.get('vpn_type') != 'ssh']
             if xray_accounts:
-                message += "🌐 𝐀𝐤𝐮𝐧 𝐗𝐑𝐀𝐘\n━━━━━━━━━━━━━━━━━━\n"
+                message += "🌐 𝗔𝗸𝘂𝗻 𝗫𝗥𝗔𝗬\n━━━━━━━━━━━━━━━━━━\n"
                 for entry in xray_accounts:
                     vpn_count += 1
                     vpn_type = entry.get('vpn_type', 'unknown').lower()
                     vpn_type_count[vpn_type] = vpn_type_count.get(vpn_type, 0) + 1
                     message += format_account_info(entry, is_vpn=True)
             else:
-                message += "📛 𝐓𝐢𝐝𝐚𝐤 𝐚𝐝𝐚 𝐚𝐤𝐮𝐧 𝐗𝐑𝐀𝐘 𝐲𝐚𝐧𝐠 𝐭𝐞𝐫𝐝𝐚𝐟𝐭𝐚𝐫.\n━━━━━━━━━━━━━━━━━━\n"
+                message += "📛 𝗧𝗶𝗱𝗮𝗸 𝗮𝗱𝗮 𝗮𝗸𝘂𝗻 𝗫𝗥𝗔𝗬 𝘆𝗮𝗻𝗴 𝘁𝗲𝗿𝗱𝗮𝗳𝘁𝗮𝗿.\n━━━━━━━━━━━━━━━━━━\n"
 
         # Handle case where no accounts are found
         if ssh_count == 0 and vpn_count == 0:
-            message += "📛 𝐓𝐢𝐝𝐚𝐤 𝐚𝐝𝐚 𝐚𝐤𝐮𝐧 𝐕𝐏𝐍 𝐲𝐚𝐧𝐠 𝐭𝐞𝐫𝐝𝐚𝐟𝐭𝐚𝐫.\n━━━━━━━━━━━━━━━━━━\n"
+            message += "📛 𝗧𝗶𝗱𝗮𝗸 𝗮𝗱𝗮 𝗮𝗸𝘂𝗻 𝗩𝗣𝗡 𝘆𝗮𝗻𝗴 𝘁𝗲𝗿𝗱𝗮𝗳𝘁𝗮𝗿.\n━━━━━━━━━━━━━━━━━━\n"
 
         # Display summary
         total_accounts = ssh_count + vpn_count
-        message += f"🟥 𝐒𝐒𝐇 : {ssh_count}\n"
+        message += f"🟥 𝗦𝗦𝗛 : {ssh_count}\n"
         for vpn_type, count in vpn_type_count.items():
-            message += f"🟨 𝐗𝐑𝐀𝐘 [ {vpn_type.upper()} ] : {count}\n"
-        message += f"🟩 𝐓𝐨𝐭𝐚𝐥 𝐕𝐏𝐍 : {total_accounts}\n"
+            message += f"🟨 𝗫𝗥𝗔𝗬 [ {vpn_type.upper()} ] : {count}\n"
+        message += f"🟩 𝗧𝗼𝘁𝗮𝗹 𝗩𝗣𝗡 : {total_accounts}\n"
         message += "━━━━━━━━━━━━━━━━━━"
 
         send_message_in_parts(update, message)
@@ -2244,19 +2244,19 @@ def format_account_info(entry, is_vpn=False):
     vpn_type = entry.get('vpn_type', 'unknown')
     if is_vpn:
         return (
-            f"𝐓𝐢𝐩𝐞 : {vpn_type}\n"
-            f"𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞 : {entry['username']}\n"
-            f"𝐒𝐞𝐫𝐯𝐞𝐫 : {entry['host']}\n"
-            f"𝐋𝐚𝐛𝐞𝐥 : {entry['label']}\n"
-            f"𝐄𝐱𝐩𝐢𝐫𝐞𝐝 : {entry['expired']} WIB\n"
+            f"𝗧𝗶𝗽𝗲 : {vpn_type}\n"
+            f"𝗨𝘀𝗲𝗿𝗻𝗮𝗺𝗲 : {entry['username']}\n"
+            f"𝗦𝗲𝗿𝘃𝗲𝗿 : {entry['host']}\n"
+            f"𝗟𝗮𝗯𝗲𝗹 : {entry['label']}\n"
+            f"𝗘𝘅𝗽𝗶𝗿𝗲𝗱 : {entry['expired']} WIB\n"
             "━━━━━━━━━━━━━━━━━━\n"
         )
     else:
         return (
-            f"𝐔𝐬𝐞𝐫𝐧𝐚𝐦𝐞 : {entry['username']}\n"
-            f"𝐒𝐞𝐫𝐯𝐞𝐫 : {entry['host']}\n"
-            f"𝐋𝐚𝐛𝐞𝐥 : {entry['label']}\n"
-            f"𝐄𝐱𝐩𝐢𝐫𝐞𝐝 : {entry['expired']} WIB\n"
+            f"𝗨𝘀𝗲𝗿𝗻𝗮𝗺𝗲 : {entry['username']}\n"
+            f"𝗦𝗲𝗿𝘃𝗲𝗿 : {entry['host']}\n"
+            f"𝗟𝗮𝗯𝗲𝗹 : {entry['label']}\n"
+            f"𝗘𝘅𝗽𝗶𝗿𝗲𝗱 : {entry['expired']} WIB\n"
             "━━━━━━━━━━━━━━━━━━\n"
         )
 
@@ -2635,7 +2635,7 @@ def show_prices(update: Update, context: CallbackContext):
 
     # Iterasi setiap server dan jenis layanan
     for server_id, services in servers.items():
-        message += f"🌐 *Server ➩ {server_id}*\n"
+        message += f"🌐 𝗦𝗲𝗿𝘃𝗲𝗿 ➩ {server_id}\n"
         for service, details in services.items():
             daily_price = details.get("price", 0)
             weekly_price = daily_price * 7
@@ -2643,9 +2643,9 @@ def show_prices(update: Update, context: CallbackContext):
 
             message += (
                 f"  🔻 *{service}*\n"
-                f"    ┗ 💰 *Per Hari :* `{daily_price}` Coin\n"
-                f"    ┗ 💰 *Per Minggu :* `{weekly_price}` Coin\n"
-                f"    ┗ 💰 *Per Bulan :* `{monthly_price}` Coin\n"
+                f"    ┗ 💰 𝗣𝗲𝗿 𝗛𝗮𝗿𝗶 : `{daily_price} 𝘾𝙤𝙞𝙣`\n"
+                f"    ┗ 💰 𝗣𝗲𝗿 𝗠𝗶𝗻𝗴𝗴𝘂 : `{weekly_price} 𝘾𝙤𝙞𝙣`\n"
+                f"    ┗ 💰 𝗣𝗲𝗿 𝗕𝘂𝗹𝗮𝗻 : `{monthly_price} 𝘾𝙤𝙞𝙣`\n"
             )
         message += "━━━━━━━━━━━━━━━━━━\n"
 
