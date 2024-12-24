@@ -2643,9 +2643,9 @@ def show_prices(update: Update, context: CallbackContext):
 
             message += (
                 f"  🔻 *{service}*\n"
-                f"    ┗ 💰 𝗣𝗲𝗿 𝗛𝗮𝗿𝗶 : `{daily_price} 𝘾𝙤𝙞𝙣`\n"
-                f"    ┗ 💰 𝗣𝗲𝗿 𝗠𝗶𝗻𝗴𝗴𝘂 : `{weekly_price} 𝘾𝙤𝙞𝙣`\n"
-                f"    ┗ 💰 𝗣𝗲𝗿 𝗕𝘂𝗹𝗮𝗻 : `{monthly_price} 𝘾𝙤𝙞𝙣`\n"
+                f"    ┗ 💰 *Per Hari :* `{daily_price} 𝘾𝙤𝙞𝙣`\n"
+                f"    ┗ 💰 *Per Minggu :* `{weekly_price} 𝘾𝙤𝙞𝙣`\n"
+                f"    ┗ 💰 *Per Bulan :* `{monthly_price} 𝘾𝙤𝙞𝙣`\n"
             )
         message += "━━━━━━━━━━━━━━━━━━\n"
 
