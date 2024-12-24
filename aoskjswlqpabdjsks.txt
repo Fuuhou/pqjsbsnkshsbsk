@@ -1642,7 +1642,7 @@ def hapus(update: Update, context: CallbackContext):
 def info(update: Update, context: CallbackContext) -> None:
     try:
         data = load_data_from_github(USER_DATA_PATH)  # User data
-        credit_data = load_data_from_github(FILE_PATH)  # credit data
+        koin_data = load_data_from_github(FILE_PATH)  # Coin data
 
         message = update.message.text.split()
         user_id = str(update.message.from_user.id)
@@ -1651,15 +1651,15 @@ def info(update: Update, context: CallbackContext) -> None:
 
         if len(message) == 1:  # User requested their own info
             if user_id in data:
-                credit = credit_data.get(user_id, {}).get('credit', 'N/A')
-                join_date = credit_data.get(user_id, {}).get('join_date', 'N/A')
+                coins = koin_data.get(user_id, {}).get('coins', 'N/A')
+                join_date = koin_data.get(user_id, {}).get('join_date', 'N/A')
 
                 caption = (
                     f"━━━━━━━━━━━━━━━━━━\n"
                     f"*Nama :* `{full_name}`\n"
                     f"*User ID :* [{user_id}](tg://user?id={user_id})\n"
                     f"*Username :* @{username}\n"
-                    f"*Saldo credit :* `{credit}`\n"
+                    f"*Saldo Koin :* `{coins}`\n"
                     f"*Bergabung :* `{join_date}`\n"
                     f"━━━━━━━━━━━━━━━━━━"
                 )
@@ -1692,15 +1692,15 @@ def info(update: Update, context: CallbackContext) -> None:
                     update.message.reply_text("User ID tidak ditemukan dalam data.")
                     return
 
-                credit = credit_data.get(target_user_id, {}).get('credit', 'N/A')
-                join_date = credit_data.get(target_user_id, {}).get('join_date', 'N/A')
+                coins = koin_data.get(target_user_id, {}).get('coins', 'N/A')
+                join_date = koin_data.get(target_user_id, {}).get('join_date', 'N/A')
 
                 caption = (
                     f"━━━━━━━━━━━━━━━━━━\n"
                     f"*Nama :* `{user_info.get('fullname', 'N/A')}`\n"
                     f"*User ID :* [{target_user_id}](tg://user?id={target_user_id})\n"
                     f"*Username :* @{user_info.get('username', 'N/A')}\n"
-                    f"*Saldo credit :* `{credit}`\n"
+                    f"*Saldo Koin :* `{coins}`\n"
                     f"*Bergabung :* `{join_date}`\n"
                     f"━━━━━━━━━━━━━━━━━━"
                 )
