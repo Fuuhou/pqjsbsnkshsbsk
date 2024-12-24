@@ -2635,7 +2635,7 @@ def show_prices(update: Update, context: CallbackContext):
 
     # Iterasi setiap server dan jenis layanan
     for server_id, services in servers.items():
-        message += f"🌐 *Server* ➩ {server_id}\n"
+        message += f"🌐 *Server ➩ {server_id}*\n"
         for service, details in services.items():
             daily_price = details.get("price", 0)
             weekly_price = daily_price * 7
@@ -2643,11 +2643,11 @@ def show_prices(update: Update, context: CallbackContext):
 
             message += (
                 f"  🔻 *{service}*\n"
-                f"    ┗ 💰 Per Hari: `{daily_price}`\n"
-                f"    ┗ 💰 Per Minggu: `{weekly_price}`\n"
-                f"    ┗ 💰 Per Bulan: `{monthly_price}`\n"
+                f"    ┗ 💰 *Per Hari :* `{daily_price}` Coin\n"
+                f"    ┗ 💰 *Per Minggu :* `{weekly_price}` Coin\n"
+                f"    ┗ 💰 *Per Bulan :* `{monthly_price}` Coin\n"
             )
-        message += "━━━━━━━━━━━━━━━━━━"
+        message += "━━━━━━━━━━━━━━━━━━\n"
 
     update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
 
