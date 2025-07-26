@@ -1,0 +1,10 @@
+{
+  "listen": ":36712",
+  "stream_buffer": 2097152,  // 2 MB (cukup untuk kebanyakan kasus)
+  "receive_buffer": 2097152, // 2 MB (sesuaikan dengan kebutuhan)
+  "auth": {
+    "mode": "passwords"
+  },
+  "compression": false,      // Nonaktifkan kompresi untuk mengurangi beban CPU
+  "timeout": 3000,            // Timeout koneksi (dalam detik)
+}
