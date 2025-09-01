@@ -1,10 +1,10 @@
 {
   "listen": ":36712",
-  "stream_buffer": 2097152,  // 2 MB (cukup untuk kebanyakan kasus)
-  "receive_buffer": 2097152, // 2 MB (sesuaikan dengan kebutuhan)
+  "stream_buffer": 2097152,         // 2 MB — cukup untuk burst ringan
+  "receive_buffer": 1048576,        // 1 MB — lebih hemat RAM, cocok untuk 30 user
   "auth": {
     "mode": "passwords"
   },
-  "compression": false,      // Nonaktifkan kompresi untuk mengurangi beban CPU
-  "timeout": 3000,            // Timeout koneksi (dalam detik)
+  "compression": false,             // Hindari overhead CPU
+  "timeout": 30000                  // 30 detik dalam milidetik (bukan 3000 detik)
 }
