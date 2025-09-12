@@ -1,87 +1,91 @@
 #!/bin/bash
-# Proxy For Edukasi & Imclass
 
-# Link Hosting Kalian
-repo="https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/"
+# Set repository URL
+REPO="https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/"
 
-wget -O /usr/local/bin/ws-dropbear ${repo}sshws/ws-dropbear
+# === Install WebSocket for Dropbear ===
+wget -O /usr/local/bin/ws-dropbear "${REPO}sshws/ws-dropbear"
 chmod +x /usr/local/bin/ws-dropbear
 
-# Installing Service
-cat > /etc/systemd/system/ws-nontls.service << END
+# Create systemd service for Dropbear WebSocket
+cat > /etc/systemd/system/ws-dropbear.service << EOF
 [Unit]
-Description=Python Proxy Mod By WixieTunnel
+Description=Dropbear WebSocket Service
 Documentation=https://t.me/xiestorez
 After=network.target nss-lookup.target
 
 [Service]
 Type=simple
-User=root
-CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
-AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
-NoNewPrivileges=true
 ExecStart=/usr/bin/python -O /usr/local/bin/ws-dropbear
 Restart=on-failure
+User=root
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
 
 [Install]
 WantedBy=multi-user.target
-END
+EOF
 
+# Enable and start Dropbear service
 systemctl daemon-reload
 systemctl enable ws-dropbear.service
-systemctl start ws-dropbear.service
 systemctl restart ws-dropbear.service
 
-wget -O /usr/local/bin/ws-ovpn ${repo}sshws/ws-ovpn.py
+# === Install WebSocket for OpenVPN ===
+wget -O /usr/local/bin/ws-ovpn "${REPO}sshws/ws-ovpn.py"
 chmod +x /usr/local/bin/ws-ovpn
 
-# Installing Service
-cat > /etc/systemd/system/ws-ovpn.service << END
+# Create systemd service for OpenVPN WebSocket
+cat > /etc/systemd/system/ws-ovpn.service << EOF
 [Unit]
-Description=Python Proxy Mod By WixieTunnel
+Description=OpenVPN WebSocket Service
 Documentation=https://t.me/xiestorez
 After=network.target nss-lookup.target
 
 [Service]
 Type=simple
-User=root
-CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
-AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
-NoNewPrivileges=true
 ExecStart=/usr/bin/python -O /usr/local/bin/ws-ovpn 2086
 Restart=on-failure
+User=root
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
 
 [Install]
 WantedBy=multi-user.target
-END
+EOF
 
+# Enable and start OpenVPN service
 systemctl daemon-reload
-systemctl enable ws-ovpn
-systemctl restart ws-ovpn
+systemctl enable ws-ovpn.service
+systemctl restart ws-ovpn.service
 
-wget -O /usr/local/bin/ws-stunnel ${repo}sshws/ws-stunnel
+# === Install WebSocket for Stunnel ===
+wget -O /usr/local/bin/ws-stunnel "${REPO}sshws/ws-stunnel"
 chmod +x /usr/local/bin/ws-stunnel
 
-# Installing Service
-cat > /etc/systemd/system/ws-stunnel.service << END
+# Create systemd service for Stunnel WebSocket
+cat > /etc/systemd/system/ws-stunnel.service << EOF
 [Unit]
-Description=Python Proxy Mod By WixieTunnel
+Description=Stunnel WebSocket Service
 Documentation=https://t.me/xiestorez
 After=network.target nss-lookup.target
 
 [Service]
 Type=simple
+ExecStart=/usr/bin/python -O /usr/local/bin/ws-stunnel
+Restart=on-failure
 User=root
 CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
-ExecStart=/usr/bin/python -O /usr/local/bin/ws-stunnel
-Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
-END
+EOF
 
+# Enable and start Stunnel service
+systemctl daemon-reload
 systemctl enable ws-stunnel.service
-systemctl start ws-stunnel.service
 systemctl restart ws-stunnel.service
