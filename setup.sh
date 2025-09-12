@@ -3,7 +3,7 @@
 # -------------------------------------------------------------------
 #  INITIAL CONFIGURATION
 # -------------------------------------------------------------------
-REPO_URL="https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main"
+REPO_URL="https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/"
 START_TIME=$(date +%s)
 THEME_DIR="/etc/rmbl/theme"
 
@@ -276,10 +276,6 @@ rm -f /root/log-install.txt /etc/afak.conf \
 
 # Initialize logs
 [[ ! -f "/etc/log-create-user.log" ]] && echo "Log All Account " > /etc/log-create-user.log
-
-# Fetch server version
-SERVER_VER=$(curl -sS "${REPO_URL}versi")
-echo "$SERVER_VER" > /opt/.ver
 
 # System info
 curl -sS ifconfig.me > /etc/myipvps
