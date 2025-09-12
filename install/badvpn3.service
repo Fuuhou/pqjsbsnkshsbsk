@@ -1,14 +1,14 @@
 [Unit]
-Description=UDP 7300
+Description=BadVPN UDP Gateway on Port 7300
 Documentation=https://man.archlinux.org/man/community/badvpn/badvpn.7.en
 After=syslog.target network-online.target
 
 [Service]
-User=root
-NoNewPrivileges=true
-ExecStart=/usr/sbin/badvpn --listen-addr 127.0.0.1:7300 --max-clients 500
+ExecStart=/usr/sbin/badvpn --listen-addr 127.0.0.1:7100 --max-clients 500
 Restart=on-failure
 RestartPreventExitStatus=23
+User=root
+NoNewPrivileges=true
 LimitNPROC=10000
 LimitNOFILE=1000000
 

@@ -1,22 +1,24 @@
 #!/bin/bash
-#
-# ==================================================
-repo="https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/"
-# etc
-apt dist-upgrade -y
-apt install netfilter-persistent -y
-apt-get remove --purge ufw firewalld -y
-apt install -y screen curl jq bzip2 gzip vnstat coreutils rsyslog iftop zip unzip git apt-transport-https build-essential -y
 
-# initializing var
+# Define the repository URL
+repo="https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/"
+
+# System upgrade and package installation
+apt dist-upgrade -y
+apt install -y netfilter-persistent screen curl jq bzip2 gzip vnstat coreutils rsyslog iftop zip unzip git apt-transport-https build-essential
+
+# Remove unnecessary packages
+apt-get remove --purge ufw firewalld exim4 -y
+
+# Initialize variables
 export DEBIAN_FRONTEND=noninteractive
-MYIP=$(wget -qO- ipinfo.io/ip);
-MYIP2="s/xxxxxxxxx/$MYIP/g";
-NET=$(ip -o $ANU -4 route show to default | awk '{print $5}');
+MYIP=$(wget -qO- ipinfo.io/ip)
+MYIP2="s/xxxxxxxxx/$MYIP/g"
+NET=$(ip -o -4 route show to default | awk '{print $5}')
 source /etc/os-release
 ver=$VERSION_ID
 
-#detail nama perusahaan
+# Company details (for SSL certificates, if needed)
 country=ID
 state=Indonesia
 locality=Jakarta
@@ -25,14 +27,11 @@ organizationalunit=none
 commonname=none
 email=none
 
-# simple password minimal
+# Set a simple password policy
 curl -sS ${repo}install/password | openssl aes-256-cbc -d -a -pass pass:scvps07gg -pbkdf2 > /etc/pam.d/common-password
 chmod +x /etc/pam.d/common-password
 
-# go to root
-cd
-
-# Edit file /etc/systemd/system/rc-local.service
+# Configure rc.local service
 cat > /etc/systemd/system/rc-local.service <<-END
 [Unit]
 Description=/etc/rc.local
@@ -48,7 +47,7 @@ SysVStartPriority=99
 WantedBy=multi-user.target
 END
 
-# nano /etc/rc.local
+# Create /etc/rc.local
 cat > /etc/rc.local <<-END
 #!/bin/sh -e
 # rc.local
@@ -56,183 +55,184 @@ cat > /etc/rc.local <<-END
 exit 0
 END
 
-# Ubah izin akses
+# Set executable permissions for rc.local
 chmod +x /etc/rc.local
 
-# enable rc local
+# Enable and start rc-local service
 systemctl enable rc-local
 systemctl start rc-local.service
 
-# disable ipv6
+# Disable IPv6
 echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
 sed -i '$ i\echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6' /etc/rc.local
 
-#update
+# System update
 apt update -y
 apt upgrade -y
 apt dist-upgrade -y
-apt-get remove --purge ufw firewalld -y
-apt-get remove --purge exim4 -y
 
-#install jq
-apt -y install jq
-
-#install shc
-apt -y install shc
-
-# install wget and curl
-apt -y install wget curl
-
-#figlet
-apt-get install figlet -y
-apt-get install ruby -y
+# Install additional tools
+apt -y install jq shc wget curl figlet ruby
 gem install lolcat
 
-# set time GMT +7
+# Set timezone to GMT+7 (Asia/Jakarta)
 ln -fs /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
 
-# set locale
+# Adjust SSH configuration
 sed -i 's/AcceptEnv/#AcceptEnv/g' /etc/ssh/sshd_config
 
-# // install
-apt-get --reinstall --fix-missing install -y bzip2 gzip coreutils wget screen rsyslog iftop htop net-tools zip unzip wget net-tools curl nano sed screen gnupg gnupg1 bc apt-transport-https build-essential dirmngr libxml-parser-perl neofetch git lsof
+# Install essential utilities
+apt-get --reinstall --fix-missing install -y bzip2 gzip coreutils wget screen rsyslog iftop htop net-tools zip unzip curl nano sed screen gnupg gnupg1 bc apt-transport-https build-essential dirmngr libxml-parser-perl neofetch git lsof
+
+# Add 'clear' and 'menu' to .profile
 echo "clear" >> .profile
 echo "menu" >> .profile
 
-install_ssl(){
-    if [ -f "/usr/bin/apt-get" ];then
-            isDebian=`cat /etc/issue|grep Debian`
-            if [ "$isDebian" != "" ];then
-                    apt-get install -y nginx certbot
-                    apt install -y nginx certbot
-                    sleep 3s
-            else
-                    apt-get install -y nginx certbot
-                    apt install -y nginx certbot
-                    sleep 3s
-            fi
+install_ssl() {
+    # Install necessary packages
+    if command -v apt-get &> /dev/null; then
+        apt-get install -y nginx certbot || apt install -y nginx certbot
     else
         yum install -y nginx certbot
-        sleep 3s
     fi
 
+    sleep 3s
+
+    # Stop nginx service
     systemctl stop nginx.service
 
-    if [ -f "/usr/bin/apt-get" ];then
-            isDebian=`cat /etc/issue|grep Debian`
-            if [ "$isDebian" != "" ];then
-                    echo "A" | certbot certonly --renew-by-default --register-unsafely-without-email --standalone -d $domain
-                    sleep 3s
-            else
-                    echo "A" | certbot certonly --renew-by-default --register-unsafely-without-email --standalone -d $domain
-                    sleep 3s
-            fi
+    # Obtain SSL certificate
+    if command -v apt-get &> /dev/null; then
+        echo "A" | certbot certonly --renew-by-default --register-unsafely-without-email --standalone -d ${domain}
     else
-        echo "Y" | certbot certonly --renew-by-default --register-unsafely-without-email --standalone -d $domain
-        sleep 3s
+        echo "Y" | certbot certonly --renew-by-default --register-unsafely-without-email --standalone -d ${domain}
     fi
+
+    sleep 3s
 }
 
-
-# install webserver
+# Install web server and PHP
 apt -y install nginx php php-fpm php-cli php-mysql libxml-parser-perl
+
+# Remove default Nginx site configuration and set new configuration
 rm /etc/nginx/sites-enabled/default
 rm /etc/nginx/sites-available/default
-curl https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/install/nginx.conf > /etc/nginx/nginx.conf
-curl https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/install/vps.conf > /etc/nginx/conf.d/vps.conf
+
+curl -s https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/install/nginx.conf -o /etc/nginx/nginx.conf
+curl -s https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/install/vps.conf -o /etc/nginx/conf.d/vps.conf
+
+# Update PHP-FPM socket configuration
 sed -i 's/listen = \/var\/run\/php-fpm.sock/listen = 127.0.0.1:9000/g' /etc/php/fpm/pool.d/www.conf
-useradd -m vps;
+
+# Create new user and set up public_html directory
+useradd -m vps
 mkdir -p /home/vps/public_html
-echo "<?php phpinfo() ?>" > /home/vps/public_html/info.php
+echo "<?php phpinfo(); ?>" > /home/vps/public_html/info.php
 chown -R www-data:www-data /home/vps/public_html
 chmod -R g+rw /home/vps/public_html
+
+# Download initial index.html for the user
 cd /home/vps/public_html
-wget -O /home/vps/public_html/index.html "${repo}install/index.html1"
-/etc/init.d/nginx restart
+wget -O index.html "${repo}install/index.html1"
 
-# install badvpn
+# Restart Nginx service
+systemctl restart nginx
+
+# Install BadVPN
 cd
-wget -O /usr/sbin/badvpn "${repo}install/badvpn" >/dev/null 2>&1
-chmod +x /usr/sbin/badvpn > /dev/null 2>&1
-wget -q -O /etc/systemd/system/badvpn1.service "${repo}install/badvpn1.service" >/dev/null 2>&1
-wget -q -O /etc/systemd/system/badvpn2.service "${repo}install/badvpn2.service" >/dev/null 2>&1
-wget -q -O /etc/systemd/system/badvpn3.service "${repo}install/badvpn3.service" >/dev/null 2>&1
-systemctl disable badvpn1 
-systemctl stop badvpn1 
-systemctl enable badvpn1
-systemctl start badvpn1 
-systemctl disable badvpn2 
-systemctl stop badvpn2 
-systemctl enable badvpn2
-systemctl start badvpn2 
-systemctl disable badvpn3 
-systemctl stop badvpn3 
-systemctl enable badvpn3
-systemctl start badvpn3 
+wget -qO /usr/sbin/badvpn "${repo}install/badvpn"
+chmod +x /usr/sbin/badvpn
 
+# Download BadVPN service files
+for i in {1..3}; do
+    wget -q -O /etc/systemd/system/badvpn${i}.service "${repo}install/badvpn${i}.service"
+    
+    # Enable and start BadVPN services
+    systemctl disable badvpn${i}
+    systemctl stop badvpn${i}
+    systemctl enable badvpn${i}
+    systemctl start badvpn${i}
+done
 
-# setting port ssh
-cd
-sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
-sed -i '/Port 22/a Port 500' /etc/ssh/sshd_config
-sed -i '/Port 22/a Port 40000' /etc/ssh/sshd_config
-sed -i '/Port 22/a Port 51443' /etc/ssh/sshd_config
-sed -i '/Port 22/a Port 58080' /etc/ssh/sshd_config
-sed -i '/Port 22/a Port 200' /etc/ssh/sshd_config
-sed -i '/Port 22/a Port 22' /etc/ssh/sshd_config
-/etc/init.d/ssh restart
+# Update SSH configuration to add ports and enable PasswordAuthentication
+sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+for port in 500 40000 51443 58080 200 22; do
+    sed -i "/Port 22/a Port $port" /etc/ssh/sshd_config
+done
 
-echo "=== Install Dropbear ==="
-# install dropbear
-apt -y install dropbear
-sed -i 's/NO_START=1/NO_START=0/g' /etc/default/dropbear
-sed -i 's/DROPBEAR_PORT=22/DROPBEAR_PORT=143/g' /etc/default/dropbear
-sed -i 's|^DROPBEAR_EXTRA_ARGS=.*|DROPBEAR_EXTRA_ARGS="-p 50000 -p 109 -p 110 -p 69"|g' /etc/default/dropbear
-echo "/bin/false" >> /etc/shells
-echo "/usr/sbin/nologin" >> /etc/shells
-/etc/init.d/ssh restart
-/etc/init.d/dropbear restart
+# Function to install Dropbear
+install_dropbear() {
+    echo "=== Install Dropbear ==="
+    apt -y install dropbear
+    
+    # Configure Dropbear
+    sed -i 's/NO_START=1/NO_START=0/' /etc/default/dropbear
+    sed -i 's/DROPBEAR_PORT=22/DROPBEAR_PORT=143/' /etc/default/dropbear
+    sed -i 's|^DROPBEAR_EXTRA_ARGS=.*|DROPBEAR_EXTRA_ARGS="-p 50000 -p 109 -p 110 -p 69"|' /etc/default/dropbear
+    
+    # Update shell configurations
+    echo "/bin/false" >> /etc/shells
+    echo "/usr/sbin/nologin" >> /etc/shells
+    
+    # Restart services
+    systemctl restart ssh
+    systemctl restart dropbear
+}
 
-# // install squid for debian 9,10 & ubuntu 20.04
-apt -y install squid3
+# Function to install Squid
+install_squid() {
+    echo "=== Install Squid ==="
+    apt -y install squid squid3
+    
+    # Configure Squid
+    wget -O /etc/squid/squid.conf "${repo}install/squid3.conf"
+    sed -i $MYIP2 /etc/squid/squid.conf
+}
 
-# install squid for debian 11
-apt -y install squid
-wget -O /etc/squid/squid.conf "${repo}install/squid3.conf"
-sed -i $MYIP2 /etc/squid/squid.conf
+# Function to set up vnStat
+setup_vnstat() {
+    echo "=== Setting up vnStat ==="
+    apt -y install vnstat libsqlite3-dev
+    systemctl restart vnstat
 
-# setting vnstat
-apt -y install vnstat
-/etc/init.d/vnstat restart
-apt -y install libsqlite3-dev
-wget https://humdi.net/vnstat/vnstat-2.6.tar.gz
-tar zxvf vnstat-2.6.tar.gz
-cd vnstat-2.6
-./configure --prefix=/usr --sysconfdir=/etc && make && make install
-cd
-vnstat -u -i $NET
-sed -i 's/Interface "'""eth0""'"/Interface "'""$NET""'"/g' /etc/vnstat.conf
-chown vnstat:vnstat /var/lib/vnstat -R
-systemctl enable vnstat
-/etc/init.d/vnstat restart
-rm -f /root/vnstat-2.6.tar.gz
-rm -rf /root/vnstat-2.6
+    # Download and install vnStat
+    wget -q https://github.com/Fuuhou/pqjsbsnkshsbsk/raw/refs/heads/main/vnstat-2.6.tar.gz
+    tar zxvf vnstat-2.6.tar.gz
+    cd vnstat-2.6
+    ./configure --prefix=/usr --sysconfdir=/etc && make && make install
+    cd ..
+    
+    # Initialize vnStat interface and configurations
+    vnstat -u -i $NET
+    sed -i 's/Interface "eth0"/Interface "'"$NET"'"/g' /etc/vnstat.conf
+    chown -R vnstat:vnstat /var/lib/vnstat
+    systemctl enable vnstat
+    systemctl restart vnstat
+    
+    # Clean up
+    rm -f vnstat-2.6.tar.gz
+    rm -rf vnstat-2.6
+}
 
-cd
-# install stunnel
-apt install stunnel4 -y
-cat > /etc/stunnel/stunnel.conf <<-END
+# Function to install stunnel4
+install_stunnel() {
+    echo "=== Install stunnel ==="
+    apt install -y stunnel4
+    
+    # Create stunnel configuration
+    cat > /etc/stunnel/stunnel.conf <<-END
+pid = /var/run/stunnel4/stunnel.pid
 cert = /etc/stunnel/stunnel.pem
 client = no
 socket = a:SO_REUSEADDR=1
 socket = l:TCP_NODELAY=1
 socket = r:TCP_NODELAY=1
 
-[dropbear]
-accept = 8080
+[dropbear1]
+accept = 8880
 connect = 127.0.0.1:22
 
-[dropbear]
+[dropbear2]
 accept = 8443
 connect = 127.0.0.1:109
 
@@ -243,156 +243,153 @@ connect = 700
 [openvpn]
 accept = 990
 connect = 127.0.0.1:1194
-
 END
 
-# make a certificate
-openssl genrsa -out key.pem 2048
-openssl req -new -x509 -key key.pem -out cert.pem -days 1095 \
--subj "/C=$country/ST=$state/L=$locality/O=$organization/OU=$organizationalunit/CN=$commonname/emailAddress=$email"
-cat key.pem cert.pem >> /etc/stunnel/stunnel.pem
+    # Create SSL certificate
+    openssl genrsa -out key.pem 2048
+    openssl req -new -x509 -key key.pem -out cert.pem -days 1095 \
+    -subj "/C=$country/ST=$state/L=$locality/O=$organization/OU=$organizationalunit/CN=$commonname/emailAddress=$email"
+    
+    cat key.pem cert.pem > /etc/stunnel/stunnel.pem
+    
+    # Enable stunnel
+    sed -i 's/ENABLED=0/ENABLED=1/' /etc/default/stunnel4
+    systemctl restart stunnel4
+}
 
-# konfigurasi stunnel
-sed -i 's/ENABLED=0/ENABLED=1/g' /etc/default/stunnel4
-/etc/init.d/stunnel4 restart
+# Function to install OpenVPN
+install_openvpn() {
+    echo "=== Install OpenVPN ==="
+    wget -q ${repo}install/vpn.sh && chmod +x vpn.sh && ./vpn.sh
+}
 
-#OpenVPN
-wget ${repo}install/vpn.sh &&  chmod +x vpn.sh && ./vpn.sh
+# Function to install lolcat
+install_lolcat() {
+    echo "=== Install lolcat ==="
+    wget -q ${repo}install/lolcat.sh && chmod +x lolcat.sh && ./lolcat.sh
+}
 
-# // install lolcat
-wget ${repo}install/lolcat.sh &&  chmod +x lolcat.sh && ./lolcat.sh
+# Function to create a swap file
+setup_swap() {
+    echo "=== Setting up Memory Swap ==="
+    cd
+    dd if=/dev/zero of=/swapfile bs=1M count=1024
+    mkswap /swapfile
+    chmod 0600 /swapfile
+    swapon /swapfile
+    echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
+}
 
-# memory swap 1gb
-cd
-dd if=/dev/zero of=/swapfile bs=1024 count=1048576
-mkswap /swapfile
-chown root:root /swapfile
-chmod 0600 /swapfile >/dev/null 2>&1
-swapon /swapfile >/dev/null 2>&1
-sed -i '$ i\/swapfile      swap swap   defaults    0 0' /etc/fstab
+# Function to install Fail2Ban
+install_fail2ban() {
+    echo "=== Installing Fail2Ban ==="
+    apt -y install fail2ban
+}
 
-# install fail2ban
-apt -y install fail2ban
+# Function to install DDOS Deflate
+install_ddos_flare() {
+    echo "=== Installing DDOS Deflate ==="
+    
+    if [ -d '/usr/local/ddos' ]; then
+        echo "Please un-install the previous version first."
+        exit 0
+    fi
 
-# Instal DDOS Flate
-if [ -d '/usr/local/ddos' ]; then
-	echo; echo; echo "Please un-install the previous version first"
-	exit 0
-else
-	mkdir /usr/local/ddos
-fi
-clear
-echo; echo 'Installing DOS-Deflate 0.6'; echo
-echo; echo -n 'Downloading source files...'
-wget -q -O /usr/local/ddos/ddos.conf http://www.inetbase.com/scripts/ddos/ddos.conf
-echo -n '.'
-wget -q -O /usr/local/ddos/LICENSE http://www.inetbase.com/scripts/ddos/LICENSE
-echo -n '.'
-wget -q -O /usr/local/ddos/ignore.ip.list http://www.inetbase.com/scripts/ddos/ignore.ip.list
-echo -n '.'
-wget -q -O /usr/local/ddos/ddos.sh http://www.inetbase.com/scripts/ddos/ddos.sh
-chmod 0755 /usr/local/ddos/ddos.sh
-cp -s /usr/local/ddos/ddos.sh /usr/local/sbin/ddos
-echo '...done'
-echo; echo -n 'Creating cron to run script every minute.....(Default setting)'
-/usr/local/ddos/ddos.sh --cron > /dev/null 2>&1
-echo '.....done'
-echo; echo 'Installation has completed.'
-echo 'Config file is at /usr/local/ddos/ddos.conf'
-echo 'Please send in your comments and/or suggestions to zaf@vsnl.com'
+    mkdir /usr/local/ddos
+    echo "Downloading source files..."
+    
+    wget -q -O /usr/local/ddos/ddos.conf http://www.inetbase.com/scripts/ddos/ddos.conf
+    wget -q -O /usr/local/ddos/LICENSE http://www.inetbase.com/scripts/ddos/LICENSE
+    wget -q -O /usr/local/ddos/ignore.ip.list http://www.inetbase.com/scripts/ddos/ignore.ip.list
+    wget -q -O /usr/local/ddos/ddos.sh http://www.inetbase.com/scripts/ddos/ddos.sh
+    
+    chmod 0755 /usr/local/ddos/ddos.sh
+    cp -s /usr/local/ddos/ddos.sh /usr/local/sbin/ddos
+    
+    echo "Creating cron job to run script every minute (Default setting)..."
+    /usr/local/ddos/ddos.sh --cron > /dev/null 2>&1
+    
+    echo "Installation completed."
+    echo "Config file is at /usr/local/ddos/ddos.conf"
+    echo "Please send your comments and suggestions to zaf@vsnl.com"
+}
 
-# banner /etc/issue.net
-echo "Banner /etc/issue.net" >>/etc/ssh/sshd_config
-sed -i 's@DROPBEAR_BANNER=""@DROPBEAR_BANNER="/etc/issue.net"@g' /etc/default/dropbear
+# Function to modify SSH and Dropbear configurations
+configure_banners() {
+    echo "=== Configuring Banners ==="
+    
+    echo "Banner /etc/issue.net" >> /etc/ssh/sshd_config
+    sed -i 's@DROPBEAR_BANNER=""@DROPBEAR_BANNER="/etc/issue.net"@g' /etc/default/dropbear
+    wget -O /etc/issue.net "${repo}install/issue.net"
+}
 
-# Ganti Banner
-wget -O /etc/issue.net "${repo}install/issue.net"
+# Function to block torrent traffic
+block_torrents() {
+    echo "=== Blocking Torrent Traffic ==="
+    
+    iptables -A FORWARD -m string --string "get_peers" --algo bm -j DROP
+    iptables -A FORWARD -m string --string "announce_peer" --algo bm -j DROP
+    iptables -A FORWARD -m string --string "find_node" --algo bm -j DROP
+    iptables -A FORWARD -m string --string "BitTorrent" -j DROP
+    iptables -A FORWARD -m string --string "BitTorrent protocol" -j DROP
+    iptables -A FORWARD -m string --string "peer_id=" -j DROP
+    iptables -A FORWARD -m string --string ".torrent" -j DROP
+    iptables -A FORWARD -m string --string "announce.php?passkey=" -j DROP
+    iptables -A FORWARD -m string --string "torrent" -j DROP
+    iptables -A FORWARD -m string --string "announce" -j DROP
+    iptables -A FORWARD -m string --string "info_hash" -j DROP
+    
+    iptables-save > /etc/iptables.up.rules
+    netfilter-persistent save
+    netfilter-persistent reload
+}
 
-#install bbr dan optimasi kernel
-wget ${repo}install/bbr.sh && chmod +x bbr.sh && ./bbr.sh
+# Function to download scripts
+download_scripts() {
+    echo "=== Downloading Scripts ==="
+    
+    cd /usr/bin
+    wget -O issue "${repo}install/issue.net"
+    wget -O m-theme "${repo}menu/m-theme.sh"
+    wget -O speedtest "${repo}install/speedtest_cli.py"
 
-# blokir torrent
-iptables -A FORWARD -m string --string "get_peers" --algo bm -j DROP
-iptables -A FORWARD -m string --string "announce_peer" --algo bm -j DROP
-iptables -A FORWARD -m string --string "find_node" --algo bm -j DROP
-iptables -A FORWARD -m string --algo bm --string "BitTorrent" -j DROP
-iptables -A FORWARD -m string --algo bm --string "BitTorrent protocol" -j DROP
-iptables -A FORWARD -m string --algo bm --string "peer_id=" -j DROP
-iptables -A FORWARD -m string --algo bm --string ".torrent" -j DROP
-iptables -A FORWARD -m string --algo bm --string "announce.php?passkey=" -j DROP
-iptables -A FORWARD -m string --algo bm --string "torrent" -j DROP
-iptables -A FORWARD -m string --algo bm --string "announce" -j DROP
-iptables -A FORWARD -m string --algo bm --string "info_hash" -j DROP
-iptables-save > /etc/iptables.up.rules
-iptables-restore -t < /etc/iptables.up.rules
-netfilter-persistent save
-netfilter-persistent reload
+    chmod +x issue m-theme speedtest
+    cd -
+}
 
 
+# Function to remove unnecessary files
+cleanup_system() {
+    echo "=== Cleaning Up ==="
+    
+    apt autoclean -y
+    apt -y remove --purge unscd samba* apache2* bind9* sendmail*
+    apt autoremove -y
+    rm -f /root/key.pem /root/cert.pem /root/ssh-vpn.sh /root/bbr.sh
+    rm -rf /etc/apache2
+}
 
+# Restart SSH service to apply changes
+systemctl restart sshd
+# Call the install_ssl function
+install_ssl
 
-# download script
-cd /usr/bin
-wget -O issue "${repo}install/issue.net"
-wget -O m-theme "${repo}menu/m-theme.sh"
-wget -O speedtest "${repo}install/speedtest_cli.py"
-wget -O xp "${repo}install/xp.sh"
+# Execute the functions in order
+install_dropbear
+install_squid
+setup_vnstat
+install_stunnel
+install_openvpn
+install_lolcat
+setup_swap
 
-chmod +x issue
-chmod +x m-theme
-chmod +x speedtest
-chmod +x xp
-cd
-
-#if [ ! -f "/etc/cron.d/xp_otm" ]; then
-cat> /etc/cron.d/xp_otm << END
-SHELL=/bin/sh
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-0 */1 * * * root /usr/bin/xp
-END
-#fi
-
-#if [ ! -f "/etc/cron.d/bckp_otm" ]; then
-cat> /etc/cron.d/bckp_otm << END
-SHELL=/bin/sh
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-15 1 * * * root /usr/bin/backup-gram
-END
-#fi
-
-cat> /etc/cron.d/tendang << END
-SHELL=/bin/sh
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-*/15 * * * * root /usr/bin/tendang
-END
-
-cat> /etc/cron.d/xraylimit << END
-SHELL=/bin/sh
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-0
-*/15 * * * * root /usr/bin/xraylimit
-END
-
-service cron restart >/dev/null 2>&1
-service cron reload >/dev/null 2>&1
-service cron start >/dev/null 2>&1
-
-# remove unnecessary files
-apt autoclean -y >/dev/null 2>&1
-apt -y remove --purge unscd >/dev/null 2>&1
-apt-get -y --purge remove samba* >/dev/null 2>&1
-apt-get -y --purge remove apache2* >/dev/null 2>&1
-apt-get -y --purge remove bind9* >/dev/null 2>&1
-apt-get -y remove sendmail* >/dev/null 2>&1
-apt autoremove -y >/dev/null 2>&1
-# finishing
-cd
-chown -R www-data:www-data /home/vps/public_html
-
-rm -f /root/key.pem
-rm -f /root/cert.pem
-rm -f /root/ssh-vpn.sh
-rm -f /root/bbr.sh
-rm -rf /etc/apache2
+# Main execution flow
+install_fail2ban
+install_ddos_flare
+configure_banners
+block_torrents
+download_scripts
+setup_cron_jobs
+cleanup_system
 
 clear

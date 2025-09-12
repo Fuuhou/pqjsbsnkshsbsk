@@ -1,38 +1,84 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Repository utama
 repo="https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/"
 
-# Install rclone tanpa interaksi
-apt-get install -y rclone
+# Update system dan install rclone
+apt update && apt install -y rclone
 
-# Konfigurasi rclone
+# Setup rclone config
+printf "q\n" | rclone config
 mkdir -p /root/.config/rclone
 wget -qO /root/.config/rclone/rclone.conf "${repo}install/rclone.conf"
 
-# Install wonder
-git clone https://github.com/Fuuhou/wonder.git && cd wonder
+# Install wondershaper
+git clone https://github.com/Fuuhou/wonder.git
+cd wondershaper
 make install
-cd .. && rm -rf wonder
+cd ~
+rm -rf wondershaper
 
-# Download & beri izin eksekusi pada beberapa skrip sekaligus
+# Unduh script ke /usr/bin
 cd /usr/bin
-for file in backup restore cleaner xp; do
-    wget -qO "$file" "${repo}menu/${file}.sh" && chmod +x "$file"
-done
-cd
+wget -qO backup "${repo}menu/backup.sh"
+wget -qO restore "${repo}menu/restore.sh"
+wget -qO cleaner "${repo}install/cleaner.sh"
+wget -qO xp "${repo}install/xp.sh"
+wget -qO gen-nginx "${repo}install/gen-nginx.sh"
+wget -qO watch-nginx "${repo}install/watch-nginx.sh"
+wget -qO xray-usage "${repo}install/xray-usage.sh"
+chmod +x backup restore cleaner xp gen-nginx watch-nginx xray-usage
 
-# Tambahkan cron job hanya jika belum ada
-[[ ! -f "/etc/cron.d/cleaner" ]] && echo -e "SHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\n0 */2 * * * root /usr/bin/cleaner" > /etc/cron.d/cleaner
-[[ ! -f "/etc/cron.d/xp_otm" ]] && echo -e "SHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\n0 */1 * * * root /usr/bin/xp" > /etc/cron.d/xp_otm
-[[ ! -f "/etc/cron.d/bckp_otm" ]] && echo -e "SHELL=/bin/sh\nPATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\n15 1 * * * root /usr/bin/bottelegram" > /etc/cron.d/bckp_otm
+# Setup cron job untuk cleaner setiap 13 menit
+if [[ ! -f /etc/cron.d/cleaner ]]; then
+    cat > /etc/cron.d/cleaner << EOF
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+*/13 * * * * root /usr/bin/cleaner
+EOF
+fi
 
-# Set ulang otomatis setiap 7 hari
+# Setup cron job untuk expired otomatis setiap 1 menit
+if [[ ! -f /etc/cron.d/xp_otm ]]; then
+    cat > /etc/cron.d/xp_otm << EOF
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+*/10 * * * * root /usr/bin/xp
+EOF
+fi
+
+# Simpan nilai otm
 echo "7" > /home/re_otm
 
-# Restart cron
+# Setup cron job untuk backup otomatis jam 2 pagi
+if [[ ! -f /etc/cron.d/bckp_otm ]]; then
+    cat > /etc/cron.d/bckp_otm << EOF
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+0 2 * * * root /usr/bin/backup
+EOF
+fi
+
+# Setup cron job untuk watch-nginx setiap 5 menit
+if [[ ! -f /etc/cron.d/auto_watch_nginx ]]; then
+    cat > /etc/cron.d/auto_watch_nginx << EOF
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+*/5 * * * * root /usr/bin/watch-nginx
+EOF
+fi
+
+# Setup cron job untuk xray-usage setiap 1 menit
+if [[ ! -f /etc/cron.d/auto_xray_usage ]]; then
+    cat > /etc/cron.d/auto_xray_usage << EOF
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+*/1 * * * * root /usr/bin/xray-usage
+EOF
+fi
+
+# Restart cron service
 service cron restart > /dev/null 2>&1
 
-# Install limit & hapus skrip sementara
-wget -qO limit.sh "${repo}bin/limit.sh" && chmod +x limit.sh && bash limit.sh
-rm -f /root/set-br.sh /root/limit.sh
+# Bersihkan skrip lama
+rm -f /root/set-br.sh
