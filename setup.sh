@@ -223,8 +223,8 @@ stage_2() {
 
 stage_3() {
   clear_screen
-  local CHATID="-100208"
-  local TOKEN="xxxxxxxx"   # ganti dengan token asli
+  local CHATID="-1002085952759"
+  local TOKEN="8225871391:AAEj5jZPSfw76fFjDK4cGIOz0bQXC4AFqc0"   # ganti dengan token asli
   local URL="https://api.telegram.org/bot${TOKEN}/sendMessage"
   local TIMEOUT=10
   local DOMAIN=$(< /etc/xray/domain)
