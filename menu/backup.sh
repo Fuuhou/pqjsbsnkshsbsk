@@ -1,72 +1,82 @@
 #!/bin/bash
+set -euo pipefail
 
-# Ambil informasi server
-biji=$(date +"%Y-%m-%d")
-colornow=$(cat /etc/rmbl/theme/color.conf)
-export NC="\e[0m"
-export YELLOW='\033[0;33m'
-export RED="\033[0;31m"
-export COLOR1="$(cat /etc/rmbl/theme/$colornow | grep -w "TEXT" | cut -d: -f2 | sed 's/ //g')"
-export COLBG1="$(cat /etc/rmbl/theme/$colornow | grep -w "BG" | cut -d: -f2 | sed 's/ //g')"
+# === Tema Terminal ===
+colornow=$(< /etc/rmbl/theme/color.conf)
+NC="\e[0m"
+YELLOW="\033[0;33m"
+RED="\033[0;31m"
+COLOR1=$(grep -w "TEXT" /etc/rmbl/theme/"$colornow" | cut -d: -f2 | xargs)
+COLBG1=$(grep -w "BG" /etc/rmbl/theme/"$colornow" | cut -d: -f2 | xargs)
 WH='\033[1;37m'
 
-# Ambil informasi IP & tanggal server
-IP=$(curl -sS ipv4.icanhazip.com)
-date=$(date +"%Y-%m-%d")
-
-# Password untuk ZIP (dapat diganti atau dibuat random)
-ZIP_PASSWORD="XieBackup_$date"
-
-# Proses Backup
-echo "🔄 Mohon tunggu, proses backup sedang berlangsung..."
-rm -rf /root/backup
-mkdir -p /root/backup
-
-# Copy semua file penting ke folder backup
-cp -r /etc/passwd /root/backup/ &> /dev/null
-cp -r /etc/group /root/backup/ &> /dev/null
-cp -r /etc/shadow /root/backup/ &> /dev/null
-cp -r /etc/gshadow /root/backup/ &> /dev/null
-cp -r /usr/bin/idchat /root/backup/ &> /dev/null
-cp -r /usr/bin/token /root/backup/ &> /dev/null
-cp -r /etc/per /root/backup/per &> /dev/null
-cp -r /etc/perlogin /root/backup/perlogin &> /dev/null
-cp -r /etc/xray /root/backup/xray &> /dev/null
-cp -r /home/vps/public_html /root/backup/public_html &> /dev/null
-cp -r /etc/vmess /root/backup/vmess &> /dev/null
-cp -r /etc/vless /root/backup/vless &> /dev/null
-cp -r /etc/trojan /root/backup/trojan &> /dev/null
-cp -r /etc/issue.net /root/backup/issue &> /dev/null
-
-# Membuat ZIP dengan password
-echo "🔐 Membuat file backup dengan password..."
-cd /root
-zip -P "$ZIP_PASSWORD" -r "$IP-$date.zip" backup > /dev/null 2>&1
-
-# Upload backup ke Google Drive menggunakan rclone
-rclone copy "/root/$IP-$date.zip" dr:backup/
-
-# Ambil link download dari rclone
-url=$(rclone link "dr:backup/$IP-$date.zip")
-id=$(echo "$url" | grep '^https' | cut -d'=' -f2)
-link="https://drive.google.com/u/4/uc?id=${id}&export=download"
-
-# Membersihkan file sementara
-rm -rf /root/backup
-rm -f "/root/$IP-$date.zip"
-
-# Tampilkan hasil backup
+# === Informasi Dasar ===
 clear
+IP=$(wget -qO- ipv4.icanhazip.com)
+DATE=$(date +"%Y-%m-%d")
+BACKUP_DIR="/root/backup"
+
+# === Proses Backup ===
+echo "🔄 Mohon tunggu, proses backup sedang berjalan..."
+
+rm -rf "$BACKUP_DIR"
+mkdir -p "$BACKUP_DIR"
+
+declare -A paths=(
+  [passwd]="/etc/passwd"
+  [group]="/etc/group"
+  [idchat]="/usr/bin/idchat"
+  [token]="/usr/bin/token"
+  [per_id]="/etc/per/id"
+  [per_token]="/etc/per/token"
+  [login_id]="/etc/perlogin/id"
+  [login_token]="/etc/perlogin/token"
+  [xray_conf]="/etc/xray/config.json"
+  [xray_ssh]="/etc/xray/ssh"
+  [sshx]="/etc/xray/sshx"
+  [public_html]="/home/vps/public_html"
+  [vmess]="/etc/vmess"
+  [vless]="/etc/vless"
+  [trojan]="/etc/trojan"
+  [issue]="/etc/issue.net"
+)
+
+# === Salin File dan Direktori Penting ===
+for name in "${!paths[@]}"; do
+  dest="$BACKUP_DIR/${name}"
+  cp -r "${paths[$name]}" "$dest" >/dev/null 2>&1 || true
+done
+
+# === Spesial File: Token ke Subfolder ===
+cp -r /etc/per/token "$BACKUP_DIR/token2" >/dev/null 2>&1 || true
+cp -r /etc/perlogin/id "$BACKUP_DIR/loginid" >/dev/null 2>&1 || true
+cp -r /etc/perlogin/token "$BACKUP_DIR/logintoken" >/dev/null 2>&1 || true
+
+# === Arsipkan & Upload ke Google Drive (via rclone) ===
+cd /root
+ARCHIVE="${IP}-${DATE}.zip"
+zip -r "$ARCHIVE" backup >/dev/null 2>&1
+rclone copy "/root/$ARCHIVE" "dr:backup/" >/dev/null 2>&1
+
+# === Generate Link Download ===
+URL=$(rclone link "dr:backup/$ARCHIVE")
+FILEID=$(echo "$URL" | grep '^https' | cut -d'=' -f2)
+LINK="https://drive.google.com/u/4/uc?id=${FILEID}&export=download"
+
+# === Bersihkan Lokal ===
+rm -rf "$BACKUP_DIR" "/root/$ARCHIVE"
+clear
+
+# === Output Informasi ===
 echo -e "
-📌 **Backup Completed!**
-==================================
-🖥 **IP VPS**       : $IP
-🔗 **Backup Link**  : $link
-🔑 **ZIP Password** : $ZIP_PASSWORD
-📅 **Date**         : $date
-==================================
+📁 Detail Backup
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🖥️ IP VPS        : $IP
+🔗 Link Backup   : $LINK
+📅 Tanggal       : $DATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 Silakan simpan link di atas untuk restore di masa depan.
 "
-echo "⚠️ **Silakan simpan link & password di tempat aman!** ⚠️"
-echo -e ""
-read -n 1 -s -r -p "🔄 Press any key to return to the menu..."
+
+read -n 1 -s -r -p "Tekan tombol apa saja untuk kembali ke menu..."
 menu

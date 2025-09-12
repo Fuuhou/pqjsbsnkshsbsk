@@ -1,110 +1,83 @@
 #!/bin/bash
-biji=`date +"%Y-%m-%d" -d "$dateFromServer"`
+
 colornow=$(cat /etc/rmbl/theme/color.conf)
 NC="\e[0m"
-RED="\033[0;31m"
-COLOR1="$(cat /etc/rmbl/theme/$colornow | grep -w "TEXT" | cut -d: -f2|sed 's/ //g')"
-COLBG1="$(cat /etc/rmbl/theme/$colornow | grep -w "BG" | cut -d: -f2|sed 's/ //g')"
 WH='\033[1;37m'
-author=$(cat /etc/profil)
+COLOR1=$(grep -w "TEXT" /etc/rmbl/theme/$colornow | cut -d: -f2 | sed 's/ //g')
+COLBG1=$(grep -w "BG" /etc/rmbl/theme/$colornow | cut -d: -f2 | sed 's/ //g')
+
+declare -A color_map
+color_map=(
+  [1]="red"           [2]="green"         [3]="yellow"         [4]="blue"
+  [5]="magenta"       [6]="cyan"          [7]="lightgray"      [8]="lightred"
+  [9]="lightgreen"   [10]="lightyellow"  [11]="lightblue"     [12]="lightmagenta"
+ [13]="lightcyan"    [14]="darkgray"
+)
+
+function apply_theme() {
+  echo "$1" > /etc/rmbl/theme/color.conf
+  echo -e "${WH}SUCCESS:${NC} Theme changed to $1"
+  echo ""
+  read -n 1 -s -r -p "  Press any key to return to menu..."
+  menu
+}
+
+function preview_theme() {
+  local newcolor=$1
+  echo -e ""
+  echo -e "\033[0mPreview: \033[1mTEXT SAMPLE\033[0m"
+  echo -e "\033[38;5;$(get_color_code $newcolor)m███████████████ ${newcolor^^} ███████████████\033[0m"
+  echo -e ""
+  read -rp "Save this theme? [Y/N]: " confirm
+  case "${confirm,,}" in
+    y) apply_theme "$newcolor" ;;
+    t|n) echo -e "${WH}Canceled.${NC}" ; sleep 1 ; menu ;;
+    *) echo -e "Invalid input." ; sleep 1 ; menu ;;
+  esac
+}
+
+function get_color_code() {
+  case "$1" in
+    red) echo 1 ;;
+    green) echo 2 ;;
+    yellow) echo 3 ;;
+    blue) echo 4 ;;
+    magenta) echo 5 ;;
+    cyan) echo 6 ;;
+    lightgray) echo 7 ;;
+    darkgray) echo 8 ;;
+    lightred) echo 9 ;;
+    lightgreen) echo 10 ;;
+    lightyellow) echo 11 ;;
+    lightblue) echo 12 ;;
+    lightmagenta) echo 13 ;;
+    lightcyan) echo 14 ;;
+    *) echo 7 ;; # default
+  esac
+}
+
 clear
-echo -e " $COLOR1╔════════════════════════════════════════════════════╗${NC}"
-echo -e " $COLOR1║${NC}${COLBG1}             ${WH}• THEMES PANEL MENU •                  ${NC}$COLOR1║ $NC"
-echo -e " $COLOR1╚════════════════════════════════════════════════════╝${NC}"
-echo -e " $COLOR1╔════════════════════════════════════════════════════╗${NC}"
-echo -e " $COLOR1║$NC ${WH}[${COLOR1}01${WH}]$NC ${COLOR1}• ${WH}COLOR RED         ${WH}[${COLOR1}08${WH}]$NC ${COLOR1}• ${WH}COLOR LIGHT RED$NC$COLOR1    ║$NC"
-echo -e " $COLOR1║$NC ${WH}[${COLOR1}02${WH}]$NC ${COLOR1}• ${WH}COLOR GREEN       ${WH}[${COLOR1}09${WH}]$NC ${COLOR1}• ${WH}COLOR LIGHT GREEN$NC$COLOR1  ║$NC"
-echo -e " $COLOR1║$NC ${WH}[${COLOR1}03${WH}]$NC ${COLOR1}• ${WH}COLOR YELLOW      ${WH}[${COLOR1}10${WH}]$NC ${COLOR1}• ${WH}COLOR LIGHT YELLOW$NC$COLOR1 ║$NC"
-echo -e " $COLOR1║$NC ${WH}[${COLOR1}04${WH}]$NC ${COLOR1}• ${WH}COLOR BLUE        ${WH}[${COLOR1}11${WH}]$NC ${COLOR1}• ${WH}COLOR LIGHT BLUE$NC$COLOR1   ║$NC"
-echo -e " $COLOR1║$NC ${WH}[${COLOR1}05${WH}]$NC ${COLOR1}• ${WH}COLOR MAGENTA     ${WH}[${COLOR1}12${WH}]$NC ${COLOR1}• ${WH}COLOR LIGHT MAGENTA$NC$COLOR1║$NC"
-echo -e " $COLOR1║$NC ${WH}[${COLOR1}06${WH}]$NC ${COLOR1}• ${WH}COLOR CYAN        ${WH}[${COLOR1}13${WH}]$NC ${COLOR1}• ${WH}COLOR LIGHT CYAN$NC$COLOR1   ║$NC"
-echo -e " $COLOR1║$NC ${WH}[${COLOR1}07${WH}]$NC ${COLOR1}• ${WH}COLOR LIGHT GRAY  ${WH}[${COLOR1}14${WH}]$NC ${COLOR1}• ${WH}COLOR DARKGRAY$NC$COLOR1     ║$NC"
-echo -e " $COLOR1╚════════════════════════════════════════════════════╝${NC}"
-echo -e " $COLOR1╔═════════════════════════ ${WH}BY${NC} ${COLOR1}═══════════════════════╗ ${NC}"
-echo -e "  $COLOR1${NC}              ${WH}   • $author •                 $COLOR1 $NC"
-echo -e " $COLOR1╚════════════════════════════════════════════════════╝${NC}"
-echo -e ""
-echo -ne " ${WH}Select menu ${COLOR1}: ${WH}"; read colormenu
-case $colormenu in
-01 | 1)
-clear
-echo "red" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-02 | 2)
-clear
-echo "green" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-03 | 3)
-clear
-echo "yellow" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-04 | 4)
-clear
-echo "blue" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-05 | 5)
-clear
-echo "magenta" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-06 | 6)
-clear
-echo "cyan" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-07 | 7)
-clear
-echo "lightgray" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-08 | 8)
-clear
-echo "lightred" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-09 | 9)
-clear
-echo "lightgreen" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-10 | 10)
-clear
-echo "lightyellow" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-11 | 11)
-clear
-echo "lightblue" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-12 | 12)
-clear
-echo "lightmagenta" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-13 | 13)
-clear
-echo "lightcyan" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-14 | 14)
-clear
-echo "darkgray" >/etc/rmbl/theme/color.conf
-echo -e "SUCCES Ganti Tema"
-;;
-00 | 0)
-clear
-menu
-;;
-*)
-clear
-m-theme
-;;
-esac
-echo -e ""
-read -n 1 -s -r -p "  Press any key to back on menu"
-menu
+echo -e "${COLOR1}╔════════════════════════════════════════════════════╗${NC}"
+echo -e "${COLOR1}║${NC}${COLBG1}             ${WH}• THEMES PANEL MENU •              ${NC}${COLOR1}║${NC}"
+echo -e "${COLOR1}╠════════════════════════════════════════════════════╣${NC}"
+echo -e "${COLOR1}║${NC} ${WH}[01]${NC} COLOR RED          ${WH}[08]${NC} COLOR LIGHT RED      ${COLOR1}║${NC}"
+echo -e "${COLOR1}║${NC} ${WH}[02]${NC} COLOR GREEN        ${WH}[09]${NC} COLOR LIGHT GREEN    ${COLOR1}║${NC}"
+echo -e "${COLOR1}║${NC} ${WH}[03]${NC} COLOR YELLOW       ${WH}[10]${NC} COLOR LIGHT YELLOW   ${COLOR1}║${NC}"
+echo -e "${COLOR1}║${NC} ${WH}[04]${NC} COLOR BLUE         ${WH}[11]${NC} COLOR LIGHT BLUE     ${COLOR1}║${NC}"
+echo -e "${COLOR1}║${NC} ${WH}[05]${NC} COLOR MAGENTA      ${WH}[12]${NC} COLOR LIGHT MAGENTA  ${COLOR1}║${NC}"
+echo -e "${COLOR1}║${NC} ${WH}[06]${NC} COLOR CYAN         ${WH}[13]${NC} COLOR LIGHT CYAN     ${COLOR1}║${NC}"
+echo -e "${COLOR1}║${NC} ${WH}[07]${NC} COLOR LIGHT GRAY   ${WH}[14]${NC} COLOR DARKGRAY       ${COLOR1}║${NC}"
+echo -e "${COLOR1}║${NC} ${WH}[00]${NC} BACK TO MENU                                ${COLOR1}║${NC}"
+echo -e "${COLOR1}╚════════════════════════════════════════════════════╝${NC}"
+echo -ne " ${WH}Select menu ${COLOR1}: ${WH}"; read input
+
+if [[ "$input" == "0" || "$input" == "00" ]]; then
+  clear
+  menu
+elif [[ -n "${color_map[$input]}" ]]; then
+  preview_theme "${color_map[$input]}"
+else
+  echo -e "${RED}Invalid option!${NC}"
+  sleep 1
+  m-theme
+fi

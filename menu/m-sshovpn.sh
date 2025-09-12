@@ -1,1017 +1,1188 @@
 #!/bin/bash
-biji=`date +"%Y-%m-%d" -d "$dateFromServer"`
-colornow=$(cat /etc/rmbl/theme/color.conf)
+
+# Load konfigurasi tema
+color_now=$(cat /etc/rmbl/theme/color.conf)
 NC="\e[0m"
 RED="\033[0;31m"
-COLOR1="$(cat /etc/rmbl/theme/$colornow | grep -w "TEXT" | cut -d: -f2|sed 's/ //g')"
-COLBG1="$(cat /etc/rmbl/theme/$colornow | grep -w "BG" | cut -d: -f2|sed 's/ //g')"
+COLOR1=$(grep -w "TEXT" /etc/rmbl/theme/"$color_now" | cut -d: -f2 | sed 's/ //g')
+COLBG1=$(grep -w "BG" /etc/rmbl/theme/"$color_now" | cut -d: -f2 | sed 's/ //g')
 WH='\033[1;37m'
-ipsaya=$(wget -qO- ifconfig.me)
-data_server=$(curl -v --insecure --silent https://google.com/ 2>&1 | grep Date | sed -e 's/< Date: //')
-date_list=$(date +"%Y-%m-%d" -d "$data_server")
-data_ip="https://raw.githubusercontent.com/Fuuhou/izin/main/ip"
 
-ISP=$(cat /etc/xray/isp)
-CITY=$(cat /etc/xray/city)
-author=$(cat /etc/profil)
-TIMES="10"
-CHATID=$(cat /etc/per/id)
-KEY=$(cat /etc/per/token)
-URL="https://api.telegram.org/bot$KEY/sendMessage"
-domain=`cat /etc/xray/domain`
-CHATID2=$(cat /etc/perlogin/id)
-KEY2=$(cat /etc/perlogin/token)
-URL2="https://api.telegram.org/bot$KEY2/sendMessage"
-cd
-if [ ! -e /etc/xray/sshx/akun ]; then
-mkdir -p /etc/xray/sshx/akun
-fi
-
-function usernew(){
-clear
-domen=`cat /etc/xray/domain`
-sldomain=`cat /etc/xray/dns`
-slkey=`cat /etc/slowdns/server.pub`
-TIMES="10"
-CHATID=$(cat /etc/per/id)
-KEY=$(cat /etc/per/token)
-URL="https://api.telegram.org/bot$KEY/sendMessage"
-ISP=$(cat /etc/xray/isp)
-CITY=$(cat /etc/xray/city)
-author=$(cat /etc/profil)
-clear
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}              ${WH}• SSH PANEL MENU •               ${NC} $COLOR1│ $NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-until [[ $Login =~ ^[a-zA-Z0-9_.-]+$ && ${CLIENT_EXISTS} == '0' ]]; do
-read -p "Username : " Login
-CLIENT_EXISTS=$(grep -w $Login /etc/xray/ssh | wc -l)
-if [[ ${CLIENT_EXISTS} == '1' ]]; then
-clear
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}              ${WH}• SSH PANEL MENU •               ${NC} $COLOR1│ $NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1│${WH} Nama Duplikat Silahkan Buat Nama Lain.          $COLOR1│"
-read -n 1 -s -r -p "Press any key to back"
-usernew
-fi
-done
-read -p "Password : " Pass
-until [[ $masaaktif =~ ^[0-9]+$ ]]; do
-read -p "Expired (hari): " masaaktif
-done
-until [[ $iplim =~ ^[0-9]+$ ]]; do
-read -p "Limit User (IP): " iplim
-done
-if [ ! -e /etc/xray/sshx ]; then
-mkdir -p /etc/xray/sshx
-fi
-if [ -z ${iplim} ]; then
-iplim="0"
-fi
-echo "${iplim}" >/etc/xray/sshx/${Login}IP
+# Informasi sistem
 IP=$(cat /etc/myipvps)
+ISP=$(cat /etc/xray/isp)
+CITY=$(cat /etc/xray/city)
+LABEL=$(cat /etc/profil)
+DOMAINZ=$(cat /etc/xray/domain)
+SLOWDNS_DOMAIN=$(cat /etc/domain/nsdomain)
+SLOWDNS_KEY=$(cat /etc/slowdns/server.pub)
+TIME2="$(LC_TIME=id_ID.UTF-8 date '+%A, %d %B %Y - %H:%M WIB')"
 
-sleep 1
+# Telegram bot utama
+TEXT1=$(cat /etc/notifsatu)
+TEXT2=$(cat /etc/notifdua)
+TIMES="10"
+KEY=$(cat /etc/per/token)
+CHAT_ID=$(cat /etc/per/id)
+BOT_TOKEN=$(cat /etc/per/token)
+URL="https://api.telegram.org/bot${BOT_TOKEN}/sendMessage"
+
+CHAT_ID2=$(cat /etc/perlogin/id)
+BOT_TOKEN2=$(cat /etc/perlogin/token)
+URL2="https://api.telegram.org/bot${BOT_TOKEN2}/sendMessage"
+
+# Pastikan direktori akun SSH tersedia
+mkdir -p /etc/xray/sshx/akun
+
+function add_ssh(){
 clear
-expi=`date -d "$masaaktif days" +"%Y-%m-%d"`
-useradd -e `date -d "$masaaktif days" +"%Y-%m-%d"` -s /bin/false -M $Login
-exp="$(chage -l $Login | grep "Account expires" | awk -F": " '{print $2}')"
-echo -e "$Pass\n$Pass\n"|passwd $Login &> /dev/null
-echo -e "### $Login $expi $Pass" >> /etc/xray/ssh
 
-TEXT="
+logfile="/etc/xray/sshx/akun/log-create-${Login}.log"
+
+# Fungsi cetak log sekaligus
+print_log() {
+  echo -e "$1" | tee -a "$logfile"
+}
+
+# Validasi username
+while true; do
+    read -rp "Username : " Login
+
+    # Validasi format
+    if [[ ! $Login =~ ^[a-zA-Z0-9_.-]+$ ]]; then
+        echo -e "\n❌ Format tidak valid. Gunakan hanya huruf, angka, titik, underscore, atau dash."
+        continue
+    fi
+
+    # Cek apakah username sudah ada
+    if grep -qw "$Login" /etc/xray/ssh; then
+        echo -e "\n⚠️ Username sudah terdaftar. Silakan coba nama lain.\n"
+        continue
+    fi
+
+    # Jika lolos semua
+    break
+done
+
+# === Validasi Password: hanya alfanumerik, panjang bebas, tanpa spasi/simbol ===
+while true; do
+    read -rp "Password : " Pass
+    if [[ $Pass =~ ^[a-zA-Z0-9]+$ ]]; then
+        break
+    else
+        echo -e "❌ Password hanya boleh huruf dan angka, tanpa spasi atau simbol.\n"
+    fi
+done
+
+# === Validasi Masa Aktif (harus angka) ===
+while true; do
+    read -rp "Expired (hari): " plus_hari
+    if [[ $plus_hari =~ ^[0-9]+$ ]]; then
+        break
+    else
+        echo -e "❌ Input masa aktif hanya boleh angka.\n"
+    fi
+done
+
+# === Validasi Limit IP User (angka saja) ===
+while true; do
+    read -rp "Limit User (IP): " iplim
+    if [[ $iplim =~ ^[0-9]+$ ]]; then
+        break
+    else
+        echo -e "❌ Input limit hanya boleh angka.\n"
+    fi
+done
+
+# Input Telegram ID
+read -p "Masukkan Telegram ID (Kosong jika ingin dilewati): " telegram_id
+
+# ✅ Validasi Telegram ID dengan fallback ke CHAT_ID
+if [[ -n "$telegram_id" && "$telegram_id" =~ ^[0-9]+$ ]]; then
+    USER_ID="$telegram_id"
+elif [[ -z "$telegram_id" ]]; then
+    #echo "ℹ️ Telegram ID tidak diberikan. Menggunakan CHAT_ID sebagai default."
+    USER_ID="$CHAT_ID"
+else
+    #echo "⚠️ Telegram ID tidak valid. Menggunakan CHAT_ID sebagai default."
+    USER_ID="$CHAT_ID"
+fi
+
+
+# Buat direktori jika belum ada
+mkdir -p /etc/xray/sshx
+
+# Simpan limit IP
+echo "${iplim:-0}" > "/etc/xray/sshx/${Login}IP"
+
+# Buat user SSH
+expi=$(date -d "$plus_hari days" +"%Y-%m-%d")
+useradd -e "$expi" -s /bin/false -M "$Login"
+echo -e "$Pass\n$Pass\n" | passwd "$Login" &> /dev/null
+
+# Simpan ke file database
+echo "### $Login $expi $Pass" >> /etc/xray/ssh
+
+
+MSG1=$(cat <<EOF
 ━━━━━━━━━━━━━━━━━━━━
-<b>PREMIUM SSH ACCOUNT</b>
+<b>INFORMASI AKUN SSH</b>
 ━━━━━━━━━━━━━━━━━━━━
-<b>Hostname :</b> <code>$domen</code>
+<b>Hostname :</b> <code>$DOMAINZ</code>
 <b>Username :</b> <code>$Login</code>
 <b>Password :</b> <code>$Pass</code>
-<b>Format WS : <code>$domen:80@$Login:$Pass</code>
-<b>Format UDP : <code>$domen:1-65535@$Login:$Pass</code>
+<b>Login Max :</b> ${iplim} IP
+<b>Expired :</b> $expi
 ━━━━━━━━━━━━━━━━━━━━
-<b>ISP :</b> <code>$ISP</code>
-<b>City :</b> <code>$CITY</code>
-<b>Login Limit :</b> ${iplim} IP
-<b>Port OpenSSH :</b> 22
-<b>Port Dropbear :</b> 109, 143
-<b>Port SSH WS :</b> 80, 7788, 8181, 8282
-<b>Port SSH SSL WS :</b> 443
-<b>Port SSL/TLS :</b> 8443,8080
-<b>Port OVPN WS SSL :</b> 2086
-<b>Port OVPN SSL :</b> 990
-<b>Port OVPN TCP :</b> 1194
-<b>Port OVPN UDP :</b> 2200
-<b>Proxy Squid :</b> 3128
-<b>Port Slowdns :</b> 80, 443, 53
+<b>SSH WS :</b> <code>$DOMAINZ:80@$Login:$Pass</code>
+<b>SSH UDP :</b> <code>$DOMAINZ:1-65535@$Login:$Pass</code>
+━━━━━━━━━━━━━━━━━━━━
+<b>ISP :</b> $ISP
+<b>Kota :</b> $CITY
+<b>OpenSSH :</b> 22
+<b>Dropbear :</b> 143, 109
+<b>SSH WS :</b> 80
+<b>SSL/TLS :</b> 8443, 8880
+<b>OVPN WS SSL :</b> 2086
+<b>OVPN SSL :</b> 990
+<b>OVPN TCP :</b> 1194
+<b>OVPN UDP :</b> 2200
 <b>BadVPN UDP :</b> 7100 - 7300
-<b>NS Hostname :</b> <code>$sldomain</code>
-<b>Pub Key :</b> <code>$slkey</code>
+<b>Host SlowDNS :</b> <code>$SLOWDNS_DOMAIN</code>
+<b>Port SlowDNS :</b> 80, 53, 443
+<b>Public Key :</b> <code>$SLOWDNS_KEY</code>
 ━━━━━━━━━━━━━━━━━━━━
-<b>Payload WS :</b>
+<b>Payload WS/WSS :</b>
 <code>GET / HTTP/1.1[crlf]Host: [host][crlf]Connection: Upgrade[crlf]User-Agent: [ua][crlf]Upgrade: ws[crlf][crlf]</code>
-━━━━━━━━━━━━━━━━━━━━
-<b>OpenVPN SSL :</b> http://$domen:81/ssl.ovpn
-<b>OpenVPN TCP :</b> http://$domen:81/tcp.ovpn
-<b>OpenVPN UDP :</b> http://$domen:81/udp.ovpn
-━━━━━━━━━━━━━━━━━━━━
-<b>EXPIRES ON :</b> <code>$exp</code>
-"
 
-curl -s --max-time $TIMES -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
-cd
-if [ ! -e /etc/tele ]; then
-echo -ne
-else
-echo "$TEXT" > /etc/notiftele
-bash /etc/tele
-fi
+<b>Payload SSL/TLS :</b>
+<code>CONNECT [host] [port] HTTP/1.1[crlf]Host: [host][crlf]User-Agent: [ua][crlf]Connection: Keep-Alive[crlf]Upgrade: websocket[crlf][crlf]</code>
+━━━━━━━━━━━━━━━━━━━━
+EOF
+)
 
 user2=$(echo "$Login" | cut -c 1-3)
-TIME2=$(date +'%Y-%m-%d %H:%M:%S')
-TEXT2="
-<code>━━━━━━━━━━━━━━━━━━━━</code>
-<b>   PEMBELIAN SSH SUCCES </b>
-<code>━━━━━━━━━━━━━━━━━━━━</code>
-<b>DOMAIN  :</b> <code>${domain} </code>
-<b>CITY    :</b> <code>$CITY </code>
-<b>DATE    :</b> <code>${TIME2} WIB </code>
-<b>DETAIL  :</b> <code>Trx SSH </code>
-<b>USER    :</b> <code>${user2}xxx </code>
-<b>IP      :</b> <code>${iplim} IP </code>
-<b>DURASI  :</b> <code>$masaaktif Hari </code>
-<code>━━━━━━━━━━━━━━━━━━━━</code>
-<i>Notif Pembelian Akun Ssh..</i>"
-curl -s --max-time $TIMES -d "chat_id=$CHATID2&disable_web_page_preview=1&text=$TEXT2&parse_mode=html" $URL2 >/dev/null
+
+MSG2=$(cat <<EOF
+━━━━━━━━━━━━━━━━━━━━
+<b>NOTIFIKASI SERVER</b>
+━━━━━━━━━━━━━━━━━━━━
+<b>Detail :</b> Buat baru SSH
+<b>Label :</b> ${LABEL}
+<b>ISP :</b> ${ISP}
+<b>Kota :</b> ${CITY}
+<b>Username :</b> ${user2}xxx
+<b>Durasi :</b> ${plus_hari} Hari
+━━━━━━━━━━━━━━━━━━━━
+<i>${TIME2}</i>
+EOF
+)
+
+# Buat ulang /etc/kirim dengan dua pengiriman
+cat <<EOF > /etc/kirim
+#!/bin/bash
+
+curl -s --max-time "${TIMES}" \\
+  -d "chat_id=${USER_ID}" \\
+  -d "disable_web_page_preview=1" \\
+  -d "text=${MSG1}" \\
+  -d "parse_mode=html" \\
+  "https://api.telegram.org/bot${KEY}/sendMessage" >/dev/null
+
+sleep 2
+
+curl -s --max-time "${TIMES}" \\
+  -d "chat_id=${CHAT_ID2}" \\
+  -d "disable_web_page_preview=1" \\
+  -d "text=${MSG2}" \\
+  -d "parse_mode=html" \\
+  "https://api.telegram.org/bot${KEY2}/sendMessage" >/dev/null
+EOF
+
+chmod +x /etc/kirim
+
+# Jalankan notifikasi
+bash /etc/kirim
 
 clear
 
-LOG_FILE="/etc/xray/sshx/akun/log-create-${Login}.log"
+# Gabungkan semua isi log dalam satu variabel
+info_log=$(cat <<EOF
+━━━━━━━━━━━━━━━━━━━━
+INFORMASI AKUN SSH
+━━━━━━━━━━━━━━━━━━━━
+Hostname : $DOMAINZ
+Username : $Login
+Password : $Pass
+Login Max : ${iplim} IP
+Expired : $expi
+━━━━━━━━━━━━━━━━━━━━
+SSH WS : $DOMAINZ:80@$Login:$Pass
+SSH UDP : $DOMAINZ:1-65535@$Login:$Pass
+━━━━━━━━━━━━━━━━━━━━
+ISP : $ISP
+Kota : $CITY
+OpenSSH : 22
+Dropbear : 143, 109
+SSH WS : 80
+SSL/TLS : 443
+OVPN WS SSL : 2086
+OVPN SSL : 990
+OVPN TCP : 1194
+OVPN UDP : 2200
+BadVPN UDP : 7100 - 7300
+Host SlowDNS : $SLOWDNS_DOMAIN
+Port SlowDNS : 80, 443, 53
+Public Key : $SLOWDNS_KEY
+━━━━━━━━━━━━━━━━━━━━
+Payload WS/WSS :
+GET / HTTP/1.1[crlf]Host: [host][crlf]Connection: Upgrade[crlf]User-Agent: [ua][crlf]Upgrade: ws[crlf][crlf]
 
-# Tulis informasi akun ke log file
-{
-echo -e "━━━━━━━━━━━━━━━━━━━━"
-echo -e "PREMIUM SSH ACCOUNT"
-echo -e "━━━━━━━━━━━━━━━━━━━━"
-echo -e "Hostname : $domen"
-echo -e "Username : $Login"
-echo -e "Password : $Pass"
-echo -e "Format WS : $domen:80@$Login:$Pass"
-echo -e "Format UDP : $domen:1-65535@$Login:$Pass"
-echo -e "━━━━━━━━━━━━━━━━━━━━"
-echo -e "ISP : $ISP"
-echo -e "City : $CITY"
-echo -e "Login Limit : ${iplim} IP"
-echo -e "Port OpenSSH : 22"
-echo -e "Port Dropbear : 109, 143"
-echo -e "Port SSH WS : 80, 7788, 8181, 8282"
-echo -e "Port SSH SSL WS : 443"
-echo -e "Port SSL/TLS : 8443,8080"
-echo -e "Port OVPN WS SSL : 2086"
-echo -e "Port OVPN SSL : 990"
-echo -e "Port OVPN TCP : 1194"
-echo -e "Port OVPN UDP : 2200"
-echo -e "Proxy Squid : 3128"
-echo -e "Port SlowDNS : 80, 443, 53"
-echo -e "BadVPN UDP : 7100 - 7300"
-echo -e "NS Hostname : $sldomain"
-echo -e "Pub Key : $slkey"
-echo -e "━━━━━━━━━━━━━━━━━━━━"
-echo -e "Payload WS :"
-echo -e "GET / HTTP/1.1[crlf]Host: [host][crlf]Connection: Upgrade[crlf]User-Agent: [ua][crlf]Upgrade: ws[crlf][crlf]"
-echo -e "━━━━━━━━━━━━━━━━━━━━"
-echo -e "OpenVPN SSL : http://$domen:81/ssl.ovpn"
-echo -e "OpenVPN TCP : http://$domen:81/tcp.ovpn"
-echo -e "OpenVPN UDP : http://$domen:81/udp.ovpn"
-echo -e "━━━━━━━━━━━━━━━━━━━━"
-echo -e "EXPIRES ON : $exp"
-} | tee -a "$LOG_FILE"
+Payload SSL/TLS :
+CONNECT [host] [port] HTTP/1.1[crlf]Host: [host][crlf]User-Agent: [ua][crlf]Connection: Keep-Alive[crlf]Upgrade: websocket[crlf][crlf]
+━━━━━━━━━━━━━━━━━━━━
+EOF
+)
+
+# Cetak seluruh log sekaligus
+print_log "${info_log}"
 
 read -n 1 -s -r -p "Press any key to back on menu"
 menu
 }
 
-function trial(){
+
+function trial_ssh(){
 clear
-domen=`cat /etc/xray/domain`
-sldomain=`cat /etc/xray/dns`
-slkey=`cat /etc/slowdns/server.pub`
-TIMES="10"
-CHATID=$(cat /etc/per/id)
-KEY=$(cat /etc/per/token)
-URL="https://api.telegram.org/bot$KEY/sendMessage"
-ISP=$(cat /etc/xray/isp)
-CITY=$(cat /etc/xray/city)
-author=$(cat /etc/profil)
-clear
-IP=$(cat /etc/myipvps)
-cd
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}           ${WH}• TRIAL SSH Account •               ${NC} $COLOR1│ $NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e ""
-until [[ $timer =~ ^[0-9]+$ ]]; do
-read -p "Expired (Minutes): " timer
+
+logfile="/etc/xray/sshx/akun/log-create-${Login}.log"
+
+# Fungsi cetak log sekaligus
+print_log() {
+  echo -e "$1" | tee -a "$logfile"
+}
+
+# ⏰ Input waktu kedaluwarsa akun trial (dalam menit)
+while true; do
+    read -p "Expired (Minutes): " timer
+    if [[ $timer =~ ^[0-9]+$ ]]; then
+        break
+    else
+        echo "Input tidak valid. Masukkan angka saja."
+    fi
 done
-Login=Trial-`</dev/urandom tr -dc X-Z0-9 | head -c4`
+
+# Input Telegram ID
+read -p "Masukkan Telegram ID (Kosong jika ingin dilewati): " telegram_id
+
+# ✅ Validasi Telegram ID dengan fallback ke CHAT_ID
+if [[ -n "$telegram_id" && "$telegram_id" =~ ^[0-9]+$ ]]; then
+    USER_ID="$telegram_id"
+elif [[ -z "$telegram_id" ]]; then
+    #echo "ℹ️ Telegram ID tidak diberikan. Menggunakan CHAT_ID sebagai default."
+    USER_ID="$CHAT_ID"
+else
+    #echo "⚠️ Telegram ID tidak valid. Menggunakan CHAT_ID sebagai default."
+    USER_ID="$CHAT_ID"
+fi
+
+
+# 🔐 Generate akun trial
+Login="Tes-$(tr -dc 'X-Z0-9' < /dev/urandom | head -c4)"
 hari=1
 Pass=1
 iplim=1
-if [ ! -e /etc/xray/sshx ]; then
-mkdir -p /etc/xray/sshx
-fi
-if [ -z ${iplim} ]; then
-iplim="0"
-fi
-if [[ -e /etc/cloudfront ]]; then
-cloudfront=$(cat /etc/cloudfront)
-else
-cloudfront="Kosong"
-fi
-echo "$iplim" > /etc/xray/sshx/${Login}IP
-expi=`date -d "$hari days" +"%Y-%m-%d"`
-useradd -e `date -d "$hari days" +"%Y-%m-%d"` -s /bin/false -M $Login
-exp="$(chage -l $Login | grep "Account expires" | awk -F": " '{print $2}')"
-echo -e "$Pass\n$Pass\n"|passwd $Login &> /dev/null
-echo -e "### $Login $expi $Pass" >> /etc/xray/ssh
-tmux new-session -d -s $Login "trial ssh $Login $expi $Pass ${timer}"
-# Jadwalkan penghapusan akun setelah 60 menit
-echo "rm -f /etc/xray/sshx/${Login} /etc/xray/sshx/${Login}IP && sed -i '/$user/d' /etc/xray/ssh " | at now + $timer minutes
 
-TEXT="
+# 📁 Buat direktori konfigurasi jika belum ada
+mkdir -p /etc/xray/sshx /etc/xray/sshx/akun
+
+# 💾 Simpan batas login IP
+echo "$iplim" > "/etc/xray/sshx/${Login}IP"
+
+# 📆 Tentukan tanggal expired akun (format YYYY-MM-DD)
+expi=$(date -d "+$hari days" +"%Y-%m-%d")
+
+# 👤 Tambahkan user SSH dengan password 1 hari
+useradd -e "$expi" -s /bin/false -M "$Login"
+echo -e "$Pass\n$Pass" | passwd "$Login" &>/dev/null
+
+# 📝 Catat ke dalam file akun SSH
+echo "### $Login $expi $Pass" >> /etc/xray/ssh
+
+# 🗓️ Tambahkan cron job untuk hapus akun secara otomatis setelah waktu trial
+cat > "/etc/cron.d/expire-trial-${Login}" <<EOF
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+*/${timer} * * * * root id "$Login" >/dev/null 2>&1 && \
+userdel -f "$Login" && \
+rm -f "/etc/xray/sshx/${Login}" "/etc/xray/sshx/${Login}IP" && \
+sed -i "/^### $Login /d" /etc/xray/ssh && \
+rm -f "/etc/xray/sshx/akun/log-create-${Login}.log" && \
+rm -f "/etc/cron.d/expire-trial-${Login}"
+EOF
+
+
+MSG1=$(cat <<EOF
 ━━━━━━━━━━━━━━━━━━━━
-<b>TRIAL SSH ACCOUNT</b>
+<b>INFORMASI TRIAL SSH</b>
 ━━━━━━━━━━━━━━━━━━━━
-<b>Hostname :</b> <code>$domen</code>
+<b>Hostname :</b> <code>$DOMAINZ</code>
 <b>Username :</b> <code>$Login</code>
 <b>Password :</b> <code>$Pass</code>
-<b>Format WS : <code>$domen:80@$Login:$Pass</code>
-<b>Format UDP : <code>$domen:1-65535@$Login:$Pass</code>
+<b>Login Max :</b> ${iplim} IP
+<b>Expired :</b> $timer Menit
 ━━━━━━━━━━━━━━━━━━━━
-<b>ISP :</b> <code>$ISP</code>
-<b>City :</b> <code>$CITY</code>
-<b>Login Limit :</b> ${iplim} IP
-<b>Port OpenSSH :</b> 22
-<b>Port Dropbear :</b> 109, 143
-<b>Port SSH WS :</b> 80, 7788, 8181, 8282
-<b>Port SSH SSL WS :</b> 443
-<b>Port SSL/TLS :</b> 8443,8080
-<b>Port OVPN WS SSL :</b> 2086
-<b>Port OVPN SSL :</b> 990
-<b>Port OVPN TCP :</b> 1194
-<b>Port OVPN UDP :</b> 2200
-<b>Proxy Squid :</b> 3128
-<b>Port Slowdns :</b> 80, 443, 53
+<b>SSH WS :</b> <code>$DOMAINZ:80@$Login:$Pass</code>
+<b>SSH UDP :</b> <code>$DOMAINZ:1-65535@$Login:$Pass</code>
+━━━━━━━━━━━━━━━━━━━━
+<b>ISP :</b> $ISP
+<b>Kota :</b> $CITY
+<b>OpenSSH :</b> 22
+<b>Dropbear :</b> 143, 109
+<b>SSH WS :</b> 80
+<b>SSL/TLS :</b> 8443, 8880
+<b>OVPN WS SSL :</b> 2086
+<b>OVPN SSL :</b> 990
+<b>OVPN TCP :</b> 1194
+<b>OVPN UDP :</b> 2200
 <b>BadVPN UDP :</b> 7100 - 7300
-<b>NS Hostname :</b> <code>$sldomain</code>
-<b>Pub Key :</b> <code>$slkey</code>
+<b>Host SlowDNS :</b> <code>$SLOWDNS_DOMAIN</code>
+<b>Port SlowDNS :</b> 80, 53, 443
+<b>Public Key :</b> <code>$SLOWDNS_KEY</code>
 ━━━━━━━━━━━━━━━━━━━━
 <b>Payload WS :</b>
 <code>GET / HTTP/1.1[crlf]Host: [host][crlf]Connection: Upgrade[crlf]User-Agent: [ua][crlf]Upgrade: ws[crlf][crlf]</code>
-━━━━━━━━━━━━━━━━━━━━
-<b>OpenVPN SSL :</b> http://$domen:81/ssl.ovpn
-<b>OpenVPN TCP :</b> http://$domen:81/tcp.ovpn
-<b>OpenVPN UDP :</b> http://$domen:81/udp.ovpn
-━━━━━━━━━━━━━━━━━━━━
-<b>EXPIRES ON :</b> <code>$timer Minutes</code>
-"
 
-curl -s --max-time $TIMES -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
-cd
-if [ ! -e /etc/tele ]; then
-echo -ne
-else
-echo "$TEXT" > /etc/notiftele
-bash /etc/tele
-fi
-cat> /etc/cron.d/trialssh${Login} << EOF
-SHELL=/bin/sh
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-*/$timer * * * * root /usr/bin/trial ssh $Login $Pass $expi
+<b>Payload SSL/TLS :</b>
+<code>CONNECT [host] [port] HTTP/1.1[crlf]Host: [host][crlf]User-Agent: [ua][crlf]Connection: Keep-Alive[crlf]Upgrade: websocket[crlf][crlf]</code>
+━━━━━━━━━━━━━━━━━━━━
 EOF
+)
+
+user2=$(echo "$Login" | cut -c 1-4)
+
+MSG2=$(cat <<EOF
+━━━━━━━━━━━━━━━━━━━━
+<b>NOTIFIKASI SERVER</b>
+━━━━━━━━━━━━━━━━━━━━
+<b>Detail :</b> Buat trial SSH
+<b>Label :</b> ${LABEL}
+<b>ISP :</b> ${ISP}
+<b>Kota :</b> ${CITY}
+<b>Username :</b> ${user2}xxx
+<b>Durasi :</b> ${timer} Menit
+━━━━━━━━━━━━━━━━━━━━
+<i>${TIME2}</i>
+EOF
+)
+
+# Buat ulang /etc/kirim dengan dua pengiriman
+cat <<EOF > /etc/kirim
+#!/bin/bash
+
+curl -s --max-time "${TIMES}" \\
+  -d "chat_id=${USER_ID}" \\
+  -d "disable_web_page_preview=1" \\
+  -d "text=${MSG1}" \\
+  -d "parse_mode=html" \\
+  "https://api.telegram.org/bot${KEY}/sendMessage" >/dev/null
+
+sleep 2
+
+curl -s --max-time "${TIMES}" \\
+  -d "chat_id=${CHAT_ID2}" \\
+  -d "disable_web_page_preview=1" \\
+  -d "text=${MSG2}" \\
+  -d "parse_mode=html" \\
+  "https://api.telegram.org/bot${KEY2}/sendMessage" >/dev/null
+EOF
+
+chmod +x /etc/kirim
+
+# Jalankan notifikasi
+bash /etc/kirim
+
 clear
 
-LOG_FILE="/etc/xray/sshx/akun/log-create-${Login}.log"
+# Gabungkan semua isi log dalam satu variabel
+info_log=$(cat <<EOF
+━━━━━━━━━━━━━━━━━━━━
+INFORMASI TRIAL SSH
+━━━━━━━━━━━━━━━━━━━━
+Hostname : $DOMAINZ
+Username : $Login
+Password : $Pass
+Login Max : ${iplim} IP
+Expired : $timer Menit
+━━━━━━━━━━━━━━━━━━━━
+SSH WS : $DOMAINZ:80@$Login:$Pass
+SSH UDP : $DOMAINZ:1-65535@$Login:$Pass
+━━━━━━━━━━━━━━━━━━━━
+ISP : $ISP
+Kota : $CITY
+OpenSSH : 22
+Dropbear : 143, 109
+SSH WS : 80
+SSL/TLS : 8443, 8880
+OVPN WS SSL : 2086
+OVPN SSL : 990
+OVPN TCP : 1194
+OVPN UDP : 2200
+BadVPN UDP : 7100 - 7300
+Host SlowDNS : $SLOWDNS_DOMAIN
+Port SlowDNS : 80, 443, 53
+Public Key : $SLOWDNS_KEY
+━━━━━━━━━━━━━━━━━━━━
+Payload WS :
+GET / HTTP/1.1[crlf]Host: [host][crlf]Connection: Upgrade[crlf]User-Agent: [ua][crlf]Upgrade: ws[crlf][crlf]
 
-# Tulis informasi akun ke log file
-{
-echo -e "━━━━━━━━━━━━━━━━━━━━"
-echo -e "TRIAL SSH ACCOUNT"
-echo -e "━━━━━━━━━━━━━━━━━━━━"
-echo -e "Hostname : $domen"
-echo -e "Username : $Login"
-echo -e "Password : $Pass"
-echo -e "Format WS : $domen:80@$Login:$Pass"
-echo -e "Format UDP : $domen:1-65535@$Login:$Pass"
-echo -e "━━━━━━━━━━━━━━━━━━━━"
-echo -e "ISP : $ISP"
-echo -e "City : $CITY"
-echo -e "Login Limit : ${iplim} IP"
-echo -e "Port OpenSSH : 22"
-echo -e "Port Dropbear : 109, 143"
-echo -e "Port SSH WS : 80, 7788, 8181, 8282"
-echo -e "Port SSH SSL WS : 443"
-echo -e "Port SSL/TLS : 8443,8080"
-echo -e "Port OVPN WS SSL : 2086"
-echo -e "Port OVPN SSL : 990"
-echo -e "Port OVPN TCP : 1194"
-echo -e "Port OVPN UDP : 2200"
-echo -e "Proxy Squid : 3128"
-echo -e "Port SlowDNS : 80, 443, 53"
-echo -e "BadVPN UDP : 7100 - 7300"
-echo -e "NS Hostname : $sldomain"
-echo -e "Pub Key : $slkey"
-echo -e "━━━━━━━━━━━━━━━━━━━━"
-echo -e "Payload WS :"
-echo -e "GET / HTTP/1.1[crlf]Host: [host][crlf]Connection: Upgrade[crlf]User-Agent: [ua][crlf]Upgrade: ws[crlf][crlf]"
-echo -e "━━━━━━━━━━━━━━━━━━━━"
-echo -e "OpenVPN SSL : http://$domen:81/ssl.ovpn"
-echo -e "OpenVPN TCP : http://$domen:81/tcp.ovpn"
-echo -e "OpenVPN UDP : http://$domen:81/udp.ovpn"
-echo -e "━━━━━━━━━━━━━━━━━━━━"
-echo -e "EXPIRES ON : $timer Minutes"
-} | tee -a "$LOG_FILE"
+Payload SSL/TLS :
+CONNECT [host] [port] HTTP/1.1[crlf]Host: [host][crlf]User-Agent: [ua][crlf]Connection: Keep-Alive[crlf]Upgrade: websocket[crlf][crlf]
+━━━━━━━━━━━━━━━━━━━━
+EOF
+)
+
+# Cetak seluruh log sekaligus
+print_log "${info_log}"
 
 read -n 1 -s -r -p "Press any key to back on menu"
 menu
 }
 
-function renew(){
+
+function renew_ssh(){
 clear
-TIMES="10"
-CHATID=$(cat /etc/per/id)
-KEY=$(cat /etc/per/token)
-URL="https://api.telegram.org/bot$KEY/sendMessage"
-ISP=$(cat /etc/xray/isp)
-CITY=$(cat /etc/xray/city)
-domain=$(cat /etc/xray/domain)
-NUMBER_OF_CLIENTS=$(grep -c -E "^### " "/etc/xray/ssh")
-if [[ ${NUMBER_OF_CLIENTS} == '0' ]]; then
+
+# 📦 Ambil jumlah user dari database
+NUMBER_OF_CLIENTS=$(grep -cE "^### " "/etc/xray/ssh")
+
+# ❌ Jika tidak ada user
+if [[ "$NUMBER_OF_CLIENTS" -eq 0 ]]; then
+    clear
+    echo -e "🚫 Tidak ada user yang terdaftar."
+    read -n 1 -s -r -p "🔙 Tekan tombol apa saja untuk kembali ke menu..."
+    m-sshovpn
+    exit
+fi
+
 clear
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}             ${WH}• RENEW USERS •                    │${NC}$COLOR1$NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│                                                 │"
-echo -e "$COLOR1│${WH} User Tidak Ada!                              $COLOR1   │"
-echo -e "$COLOR1│                                                 │"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
+
+# 📋 Tampilkan daftar user
+echo "📦 Daftar user yang tersedia:"
+echo "-----------------------------------"
+grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2
 echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-m-sshovpn
+
+# 👤 Input username
+read -rp "🔍 Masukkan username yang ingin di-renew: " User
+
+# ❌ Cek apakah user ada
+cek_user=$(grep -wE "^### $User" /etc/xray/ssh)
+if [[ -z "$cek_user" ]]; then
+    echo -e "\n🚫 ${COLOR1}User tidak ditemukan!${NC}"
+    read -n 1 -s -r -p "🔙 Tekan tombol apa saja untuk kembali ke menu..."
+    m-sshovpn
+    exit
 fi
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}             ${WH}• RENEW USERS •                    │${NC}$COLOR1$NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│ ${WH}Silahkan Pilih User Yang Mau di Renew$COLOR1           │"
-echo -e "$COLOR1│ ${WH}ketik [0] kembali kemenu$COLOR1                        │"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2-3 | nl -s ') '
-until [[ ${CLIENT_NUMBER} -ge 1 && ${CLIENT_NUMBER} -le ${NUMBER_OF_CLIENTS} ]]; do
-if [[ ${CLIENT_NUMBER} == '1' ]]; then
-read -rp "Select one client [1]: " CLIENT_NUMBER
+
+# 📲 Input Telegram ID (optional)
+read -p "📨 Masukkan Telegram ID (biarkan kosong untuk melewati): " telegram_id
+
+# ✅ Validasi Telegram ID dengan fallback
+if [[ -n "$telegram_id" && "$telegram_id" =~ ^[0-9]+$ ]]; then
+    USER_ID="$telegram_id"
+elif [[ -z "$telegram_id" ]]; then
+    #echo "ℹ️ Telegram ID tidak diberikan. Menggunakan CHAT_ID sebagai default."
+    USER_ID="$CHAT_ID"
 else
-read -rp "Select one client [1-${NUMBER_OF_CLIENTS}]: " CLIENT_NUMBER
-if [[ ${CLIENT_NUMBER} == '0' ]]; then
-m-sshovpn
+    #echo "⚠️ Telegram ID tidak valid. Menggunakan CHAT_ID sebagai default."
+    USER_ID="$CHAT_ID"
 fi
-fi
+
+# 🔄 Ambil informasi lama
+exp=$(echo "$cek_user" | awk '{print $3}')
+Pass=$(echo "$cek_user" | awk '{print $4}')
+
+# 🕒 Input jumlah hari tambahan
+while true; do
+    read -rp "➕ Tambah berapa hari: " Days
+    if [[ "$Days" =~ ^[0-9]+$ ]]; then
+        break
+    else
+        echo "❌ Input tidak valid. Harus berupa angka!"
+    fi
 done
-User=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2 | sed -n "${CLIENT_NUMBER}"p)
-exp=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 3 | sed -n "${CLIENT_NUMBER}"p)
-Pass=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 4 | sed -n "${CLIENT_NUMBER}"p)
-egrep "^$User" /etc/passwd >/dev/null
-if [ $? -eq 0 ]; then
-read -p "Day Extend : " Days
+
+# 📆 Hitung masa berlaku baru
 now=$(date +%Y-%m-%d)
 d1=$(date -d "$exp" +%s)
 d2=$(date -d "$now" +%s)
-exp2=$(( (d1 - d2) / 86400 ))
-exp3=$(($exp2 + $Days))
-exp4=`date -d "$exp3 days" +"%Y-%m-%d"`
-passwd -u $User
-usermod -e  $exp4 $User
-egrep "^$User" /etc/passwd >/dev/null
-echo -e "$Pass\n$Pass\n"|passwd $User &> /dev/null
-sed -i "s/### $User $exp/### $User $exp4/g" /etc/xray/ssh >/dev/null
-clear
-TEXT="
-━━━━━━━━━━━━━━━━━━━━
-<b>  SSH RENEW</b>
-━━━━━━━━━━━━━━━━━━━━
-<b>DOMAIN   :</b> <code>${domain} </code>
-<b>ISP      :</b> <code>$ISP $CITY </code>
-<b>USERNAME :</b> <code>$User </code>
-<b>EXPIRED  :</b> <code>$exp4 </code>
-━━━━━━━━━━━━━━━━━━━━
-"
-curl -s --max-time $TIMES -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
-cd
-if [ ! -e /etc/tele ]; then
-echo -ne
-else
-echo "$TEXT" > /etc/notiftele
-bash /etc/tele
-fi
-user2=$(echo "$User" | cut -c 1-3)
-TIME2=$(date +'%Y-%m-%d %H:%M:%S')
-TEXT2="
-━━━━━━━━━━━━━━━━━━━━
-<b>   TRANSAKSI SUCCES </b>
-━━━━━━━━━━━━━━━━━━━━
-<b>DOMAIN   :</b> <code>${domain} </code>
-<b>ISP      :</b> <code>$CITY </code>
-<b>DATE   :</b> <code>${TIME2} WIB</code>
-<b>DETAIL   :</b> <code>Trx SSH </code>
-<b>USER :</b> <code>${user2}xxx </code>
-<b>DURASI  :</b> <code>$Days Hari </code>
-━━━━━━━━━━━━━━━━━━━━
-<i>Renew Account From Server..</i>
-"
-curl -s --max-time $TIMES -d "chat_id=$CHATID2&disable_web_page_preview=1&text=$TEXT2&parse_mode=html" $URL2 >/dev/null
-clear
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}             ${WH}• RENEW USERS •                    │${NC}$COLOR1$NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│"
-echo -e "$COLOR1│ ${WH}Username   : $User"
-echo -e "$COLOR1│ ${WH}Days Added : $Days Days"
-echo -e "$COLOR1│ ${WH}Expired on : $exp4"
-echo -e "$COLOR1│"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-fi
-read -n 1 -s -r -p "Press any key to back on menu"
-m-sshovpn
-}
+sisa_hari=$(( (d1 - d2) / 86400 ))
+total_hari=$(( sisa_hari + Days ))
+exp_baru=$(date -d "$total_hari days" +"%Y-%m-%d")
 
-function hapus(){
-NUMBER_OF_CLIENTS=$(grep -c -E "^### " "/etc/xray/ssh")
-if [[ ${NUMBER_OF_CLIENTS} == '0' ]]; then
+# 🔐 Eksekusi update user
+passwd -u "$User"
+usermod -e "$exp_baru" "$User"
+echo -e "$Pass\n$Pass" | passwd "$User" &> /dev/null
+
+# 📝 Update database SSH
+sed -i "s/^### $User $exp/### $User $exp_baru/" /etc/xray/ssh
+
+
+MSG1=$(cat <<EOF
+━━━━━━━━━━━━━━━━━━━━
+<b>TAMBAH MASA AKTIF</b>
+━━━━━━━━━━━━━━━━━━━━
+<b>Protokol :</b> <code>SSH</code>
+<b>Domain :</b> <code>${DOMAINZ}</code>
+<b>ISP :</b> <code>${ISP}</code>
+<b>Kota :</b> <code>${CITY}</code>
+<b>Username :</b> <code>${User}</code>
+<b>Durasi :</b> <code>${Days} Hari</code>
+<b>Expired Baru :</b> <code>${exp_baru}</code>
+━━━━━━━━━━━━━━━━━━━━
+EOF
+)
+
+user2=$(echo "$Login" | cut -c 1-)
+MSG2=$(cat <<EOF
+━━━━━━━━━━━━━━━━━━━━
+<b>NOTIFIKASI SERVER</b>
+━━━━━━━━━━━━━━━━━━━━
+<b>Detail :</b> Tambah masa aktif SSH
+<b>Label :</b> ${LABEL}
+<b>ISP :</b> ${ISP}
+<b>Kota :</b> ${CITY}
+<b>Username :</b> ${user2}xxx
+<b>Durasi :</b> ${Days} Hari
+━━━━━━━━━━━━━━━━━━━━
+<i>${TIME2}</i>
+EOF
+)
+
+# Buat ulang /etc/kirim dengan dua pengiriman
+cat <<EOF > /etc/kirim
+#!/bin/bash
+
+curl -s --max-time "${TIMES}" \\
+  -d "chat_id=${USER_ID}" \\
+  -d "disable_web_page_preview=1" \\
+  -d "text=${MSG1}" \\
+  -d "parse_mode=html" \\
+  "https://api.telegram.org/bot${KEY}/sendMessage" >/dev/null
+
+sleep 2
+
+curl -s --max-time "${TIMES}" \\
+  -d "chat_id=${CHAT_ID2}" \\
+  -d "disable_web_page_preview=1" \\
+  -d "text=${MSG2}" \\
+  -d "parse_mode=html" \\
+  "https://api.telegram.org/bot${KEY2}/sendMessage" >/dev/null
+EOF
+
+chmod +x /etc/kirim
+
+# Jalankan notifikasi
+bash /etc/kirim
+
 clear
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}             ${WH}• DELETE USERS •                   │${NC}$COLOR1$NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│                                                 │"
-echo -e "$COLOR1│${WH} User Tidak Ada!                              $COLOR1   │"
-echo -e "$COLOR1│                                                 │"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-m-sshovpn
-fi
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}             ${WH}• DELETE USERS •                   │${NC}$COLOR1$NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│ ${WH}Silahkan Pilih User Yang Mau Didelete     $COLOR1      │"
-echo -e "$COLOR1│ ${WH}ketik [0] kembali kemenu                     $COLOR1   │"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2-3 | nl -s ') '
-until [[ ${CLIENT_NUMBER} -ge 1 && ${CLIENT_NUMBER} -le ${NUMBER_OF_CLIENTS} ]]; do
-if [[ ${CLIENT_NUMBER} == '1' ]]; then
-read -rp "Select one client [1]: " CLIENT_NUMBER
-else
-read -rp "Select one client [1-${NUMBER_OF_CLIENTS}]: " CLIENT_NUMBER
-if [[ ${CLIENT_NUMBER} == '0' ]]; then
-m-sshovpn
-fi
-fi
-done
-Pengguna=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2 | sed -n "${CLIENT_NUMBER}"p)
-Days=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 3 | sed -n "${CLIENT_NUMBER}"p)
-Pass=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 4 | sed -n "${CLIENT_NUMBER}"p)
-sed -i "/^### $Pengguna $Days $Pass/d" /etc/xray/ssh
-rm /home/vps/public_html/ssh-$Pengguna.txt >/dev/null 2>&1
-rm /etc/xray/sshx/${Pengguna}IP >/dev/null 2>&1
-rm /etc/xray/sshx/${Pengguna}login >/dev/null 2>&1
-if getent passwd $Pengguna > /dev/null 2>&1; then
-userdel $Pengguna > /dev/null 2>&1
-echo -e "User $Pengguna was removed."
-else
-echo -e "Failure: User $Pengguna Not Exist."
-fi
-TEXT="
+
+# Gabungkan semua isi log dalam satu variabel
+info=$(cat <<EOF
 ━━━━━━━━━━━━━━━━━━━━
-<b>  DELETE SSH OVPN</b>
+TAMBAH MASA AKTIF
 ━━━━━━━━━━━━━━━━━━━━
-<b>DOMAIN   :</b> <code>${domain} </code>
-<b>ISP      :</b> <code>$ISP $CITY </code>
-<b>USERNAME :</b> <code>$Pengguna </code>
-<b>EXPIRED  :</b> <code>$Days </code>
+Protokol : SSH
+Domain : ${DOMAINZ}
+ISP : ${ISP}
+Kota : ${CITY}
+Username : ${User}
+Durasi : ${Days} Hari
+Expired Baru : ${exp_baru}
 ━━━━━━━━━━━━━━━━━━━━
-<i>Succes Delete This User...</i>
-"
-curl -s --max-time $TIMES -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
-cd
-if [ ! -e /etc/tele ]; then
-echo -ne
-else
-echo "$TEXT" > /etc/notiftele
-bash /etc/tele
-fi
+EOF
+)
+
+# Tampilkan log
+echo -e "${info}"
+
 read -n 1 -s -r -p "Press any key to back on menu"
-m-sshovpn
-}
-function cekconfig(){
-ISP=$(cat /etc/xray/isp)
-CITY=$(cat /etc/xray/city)
-author=$(cat /etc/profil)
-IP=$(cat /etc/myipvps)
-domen=`cat /etc/xray/domain`
-sldomain=`cat /etc/xray/dns`
-slkey=`cat /etc/slowdns/server.pub`
-NUMBER_OF_CLIENTS=$(grep -c -E "^### " "/etc/xray/ssh")
-if [[ ${NUMBER_OF_CLIENTS} == '0' ]]; then
-clear
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}             ${WH}• USER CONFIG •                    │${NC}$COLOR1$NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│                                                 │"
-echo -e "$COLOR1│${WH} User Tidak Ada!                              $COLOR1   │"
-echo -e "$COLOR1│                                                 │"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-m-sshovpn
-fi
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}             ${WH}• USER CONFIG •                    │${NC}$COLOR1$NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│ ${WH}Silahkan Pilih User Yang Mau Dicek     $COLOR1         │"
-echo -e "$COLOR1│ ${WH}ketik [0] kembali kemenu                     $COLOR1   │"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2-3 | nl -s ') '
-until [[ ${CLIENT_NUMBER} -ge 1 && ${CLIENT_NUMBER} -le ${NUMBER_OF_CLIENTS} ]]; do
-if [[ ${CLIENT_NUMBER} == '1' ]]; then
-read -rp "Select one client [1]: " CLIENT_NUMBER
-else
-read -rp "Select one client [1-${NUMBER_OF_CLIENTS}]: " CLIENT_NUMBER
-if [[ ${CLIENT_NUMBER} == '0' ]]; then
-m-sshovpn
-fi
-fi
-done
-Login=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2 | sed -n "${CLIENT_NUMBER}"p)
-cat /etc/xray/sshx/akun/log-create-${Login}.log
-cat /etc/xray/sshx/akun/log-create-${Login}.log > /etc/notifakun
-sed -i 's/\x1B\[1;37m//g' /etc/notifakun
-sed -i 's/\x1B\[0;96m//g' /etc/notifakun
-sed -i 's/\x1B\[0m//g' /etc/notifakun
-TEXT=$(cat /etc/notifakun)
-curl -s --max-time $TIMES -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
-cd
-if [ ! -e /etc/tele ]; then
-echo -ne
-else
-echo "$TEXT" > /etc/notiftele
-bash /etc/tele
-fi
-read -n 1 -s -r -p "   Press any key to back on menu"
 menu
 }
 
-function hapuslama(){
+
+function hapus_ssh(){
 clear
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1}                 ${WH}• MEMBER SSH •                 ${NC}$COLOR1$NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo "USERNAME          EXP DATE          STATUS"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-while read expired
-do
-AKUN="$(echo $expired | cut -d: -f1)"
-ID="$(echo $expired | grep -v nobody | cut -d: -f3)"
-exp="$(chage -l $AKUN | grep "Account expires" | awk -F": " '{print $2}')"
-status="$(passwd -S $AKUN | awk '{print $2}' )"
-if [[ $ID -ge 1000 ]]; then
-if [[ "$status" = "L" ]]; then
-printf "%-17s %2s %-17s %2s \n" "$AKUN" "$exp     " "LOCKED"
+
+# 🔢 Hitung jumlah user SSH
+NUMBER_OF_CLIENTS=$(grep -c -E "^### " "/etc/xray/ssh")
+
+# ❌ Jika tidak ada user
+if [[ $NUMBER_OF_CLIENTS -eq 0 ]]; then
+    clear
+    echo -e "${COLOR1}Tidak ada user yang terdaftar!${NC}\n"
+    
+    read -n 1 -s -r -p "Tekan tombol apa saja untuk kembali ke menu..."
+    m-sshovpn
+    exit
+fi
+
+echo -e "${COLOR1}Silakan pilih user yang ingin dihapus:${NC}"
+
+# 📋 Tampilkan daftar user
+grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2-3 | nl -s ') '
+
+# 🔁 Input pilihan user
+while true; do
+    read -rp "Pilih nomor user [1-$NUMBER_OF_CLIENTS, 0 untuk kembali]: " CLIENT_NUMBER
+    if [[ "$CLIENT_NUMBER" == "0" ]]; then
+        m-sshovpn
+        exit
+    elif [[ "$CLIENT_NUMBER" =~ ^[0-9]+$ ]] && (( CLIENT_NUMBER >= 1 && CLIENT_NUMBER <= NUMBER_OF_CLIENTS )); then
+        break
+    else
+        echo "Input tidak valid!"
+    fi
+done
+
+# 🔍 Ambil detail user berdasarkan input
+User=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2 | sed -n "${CLIENT_NUMBER}p")
+Exp=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 3 | sed -n "${CLIENT_NUMBER}p")
+Pass=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 4 | sed -n "${CLIENT_NUMBER}p")
+
+# 🧹 Hapus data user dari database dan file terkait
+sed -i "/^### $User $Exp $Pass/d" /etc/xray/ssh
+rm -f /etc/xray/sshx/${User}IP
+rm -f /etc/xray/sshx/${User}login
+rm -f /etc/xray/sshx/akun/log-create-${User}.log
+
+# ❌ Hapus akun dari sistem jika ada
+if getent passwd "$User" > /dev/null 2>&1; then
+    userdel "$User" > /dev/null 2>&1
+    echo -e "${COLOR1}User ${WH}$User${COLOR1} berhasil dihapus.${NC}"
 else
-printf "%-17s %2s %-17s %2s \n" "$AKUN" "$exp     " "UNLOCKED"
+    echo -e "${COLOR1}Gagal: User ${WH}$User${COLOR1} tidak ditemukan di sistem.${NC}"
 fi
+
+# 📤 Kirim notifikasi Telegram
+MSG1=$(cat <<EOF
+━━━━━━━━━━━━━━━━━━━━
+<b>HAPUS AKUN VPN</b>
+━━━━━━━━━━━━━━━━━━━━
+<b>Domain :</b> <code>${DOMAINZ}</code>
+<b>ISP :</b> <code>${ISP}</code>
+<b>Kota :</b> <code>${CITY}</code>
+<b>Username :</b> <code>${User}</code>
+<b>Expired :</b> <code>${Exp}</code>
+━━━━━━━━━━━━━━━━━━━━
+EOF
+)
+
+curl -s --max-time "${TIMES}" \
+     -d "chat_id=${CHAT_ID2}&disable_web_page_preview=1&text=${MSG}&parse_mode=html" \
+     "${URL}" > /dev/null
+
+# ✅ Kembali ke menu
+read -n 1 -s -r -p "Tekan tombol apa saja untuk kembali ke menu..."
+m-sshovpn
+}
+
+
+function check_ssh(){
+clear
+
+NUMBER_OF_CLIENTS=$(grep -c -E "^### " "/etc/xray/ssh")
+
+# 🔍 Cek apakah ada user
+if [[ ${NUMBER_OF_CLIENTS} == '0' ]]; then
+    clear
+    echo -e "Tidak ada user terdaftar!\n"
+    read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+    m-sshovpn
+    exit
 fi
+
+# 🧾 Tampilkan daftar user
+clear
+echo -e "Silakan pilih user yang ingin dicek:\n"
+
+grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2-3 | nl -s ') '
+
+# 🔢 Pilih user berdasarkan nomor
+while true; do
+    read -rp "Pilih user [1-${NUMBER_OF_CLIENTS}] atau [0] untuk kembali: " CLIENT_NUMBER
+    if [[ $CLIENT_NUMBER == "0" ]]; then
+        m-sshovpn
+        exit
+    elif [[ $CLIENT_NUMBER =~ ^[0-9]+$ ]] && (( CLIENT_NUMBER >= 1 && CLIENT_NUMBER <= NUMBER_OF_CLIENTS )); then
+        break
+    else
+        echo "Input tidak valid!"
+    fi
+done
+
+# 🎯 Ambil username dari daftar
+Login=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2 | sed -n "${CLIENT_NUMBER}p")
+
+# 📄 Tampilkan dan salin log akun
+if [[ -f /etc/xray/sshx/akun/log-create-${Login}.log ]]; then
+    cat "/etc/xray/sshx/akun/log-create-${Login}.log"
+    cp "/etc/xray/sshx/akun/log-create-${Login}.log" /etc/notiftiga
+else
+    echo "Log tidak ditemukan untuk user: $Login"
+    read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+    m-sshovpn
+    exit
+fi
+
+# 📤 Kirim ke Telegram
+MSG1=$(cat /etc/notiftiga)
+curl -s --max-time "${TIMES}" -d "chat_id=${CHAT_ID2}&disable_web_page_preview=1&text=${MSG}&parse_mode=html" "${URL}" >/dev/null
+
+read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+menu
+}
+
+
+function delete_lock_ssh(){
+clear
+
+# 📋 Tabel Header
+printf "%-17s %-20s %-10s\n" "USERNAME" "EXP DATE" "STATUS"
+
+# 🔍 Loop Semua Akun
+while IFS=: read -r AKUN _ ID _ _ _ _; do
+    if [[ $ID -ge 1000 && $AKUN != "nobody" ]]; then
+        exp=$(chage -l "$AKUN" | grep "Account expires" | awk -F": " '{print $2}')
+        status=$(passwd -S "$AKUN" | awk '{print $2}')
+        if [[ "$status" == "L" ]]; then
+            STATUS="LOCKED"
+        else
+            STATUS="UNLOCKED"
+        fi
+        printf "%-17s %-20s %-10s\n" "$AKUN" "$exp" "$STATUS"
+    fi
 done < /etc/passwd
-JUMLAH="$(awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}' /etc/passwd | wc -l)"
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo "Account number: $JUMLAH user"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1 ${NC}${COLBG1}              ${WH}• DELETE USERS •                   ${NC}$COLOR1$NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
+
+# 📊 Total User
+JUMLAH=$(awk -F: '$3 >= 1000 && $1 != "nobody"' /etc/passwd | wc -l)
+echo -e "\nTotal akun pengguna: $JUMLAH"
+
+# ❌ Hapus User
 echo ""
-read -p "Username SSH to Delete : " Pengguna
-if getent passwd $Pengguna > /dev/null 2>&1; then
-userdel $Pengguna > /dev/null 2>&1
-echo -e "User $Pengguna was removed."
+read -rp "Masukkan Username SSH yang akan dihapus: " Pengguna
+if getent passwd "$Pengguna" > /dev/null 2>&1; then
+    userdel "$Pengguna" > /dev/null 2>&1
+    echo -e "✅ User '$Pengguna' berhasil dihapus."
 else
-echo -e "Failure: User $Pengguna Not Exist."
+    echo -e "⚠️  Gagal: User '$Pengguna' tidak ditemukan."
 fi
+
+# 🧹 Hapus dari file xray
 sed -i "/^### $Pengguna/d" /etc/xray/ssh
-read -n 1 -s -r -p "Press any key to back on menu"
+
+# 🔙 Kembali ke menu
+read -n 1 -s -r -p "Tekan tombol apa saja untuk kembali ke menu..."
 m-sshovpn
 }
 
-function cek(){
-TIMES="10"
-CHATID=$(cat /etc/per/id)
-KEY=$(cat /etc/per/token)
-URL="https://api.telegram.org/bot$KEY/sendMessage"
-ISP=$(cat /etc/xray/isp)
-CITY=$(cat /etc/xray/city)
-domain=$(cat /etc/xray/domain)
-author=$(cat /etc/profil)
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}             ${WH}• SSH ACTIVE USERS •              ${NC} $COLOR1│ $NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-rm -rf /tmp/ssh2
-sleep 3
-if [ -e "/var/log/auth.log" ]; then
-LOG="/var/log/auth.log";
-fi
-cat /etc/passwd | grep "/home/" | cut -d":" -f1 > /etc/user.txt
-username1=( `cat "/etc/user.txt" `);
-i="0";
-for user in "${username1[@]}"
-do
-username[$i]=`echo $user | sed 's/'\''//g'`;
-jumlah[$i]=0;
-i=$i+1;
-done
-cat $LOG | grep -i dropbear | grep -i "Password auth succeeded" > /tmp/log-db.txt
-proc=( `ps aux | grep -i dropbear | awk '{print $2}'`);
-for PID in "${proc[@]}"
-do
-cat /tmp/log-db.txt | grep "dropbear\[$PID\]" > /tmp/log-db-pid.txt
-NUM=`cat /tmp/log-db-pid.txt | wc -l`;
-USER=`cat /tmp/log-db-pid.txt | awk '{print $10}' | sed 's/'\''//g'`;
-IP=`cat /tmp/log-db-pid.txt | awk '{print $12}'`;
-if [ $NUM -eq 1 ]; then
-TIME=$(date +'%H:%M:%S')
-echo "$USER $TIME : $IP" >>/tmp/ssh2
-i=0;
-for user1 in "${username[@]}"
-do
-if [ "$USER" == "$user1" ]; then
-jumlah[$i]=`expr ${jumlah[$i]} + 1`;
-pid[$i]="${pid[$i]} $PID"
-fi
-i=$i+1;
-done
-fi
-done
-cat $LOG | grep -i sshd | grep -i "Accepted password for" > /tmp/log-db.txt
-data=( `ps aux | grep "\[priv\]" | sort -k 72 | awk '{print $2}'`);
-for PID in "${data[@]}"
-do
-cat /tmp/log-db.txt | grep "sshd\[$PID\]" > /tmp/log-db-pid.txt;
-NUM=`cat /tmp/log-db-pid.txt | wc -l`;
-USER=`cat /tmp/log-db-pid.txt | awk '{print $9}'`;
-IP=`cat /tmp/log-db-pid.txt | awk '{print $11}'`;
-if [ $NUM -eq 1 ]; then
-TIME=$(date +'%H:%M:%S')
-echo "$USER $TIME : $IP" >>/tmp/ssh2
-i=0;
-for user1 in "${username[@]}"
-do
-if [ "$USER" == "$user1" ]; then
-jumlah[$i]=`expr ${jumlah[$i]} + 1`;
-pid[$i]="${pid[$i]} $PID"
-fi
-i=$i+1;
-done
-fi
-done
-j="0";
-for i in ${!username[*]}
-do
-limitip="0"
-if [[ ${jumlah[$i]} -gt $limitip ]]; then
-sship=$(cat /tmp/ssh2  | grep -w "${username[$i]}" | wc -l)
-echo -e "$COLOR1${NC} USERNAME : \033[0;33m${username[$i]}";
-echo -e "$COLOR1${NC} IP LOGIN : \033[0;33m$sship";
-echo -e ""
-fi
-done
-if [ -f "/etc/openvpn/server/openvpn-tcp.log" ]; then
-echo " "
-cat /etc/openvpn/server/openvpn-tcp.log | grep -w "^CLIENT_LIST" | cut -d ',' -f 2,3,8 | sed -e 's/,/      /g' > /tmp/vpn-login-tcp.txt
-cat /tmp/vpn-login-tcp.txt
-fi
-if [ -f "/etc/openvpn/server/openvpn-udp.log" ]; then
-echo " "
-cat /etc/openvpn/server/openvpn-udp.log | grep -w "^CLIENT_LIST" | cut -d ',' -f 2,3,8 | sed -e 's/,/      /g' > /tmp/vpn-login-udp.txt
-cat /tmp/vpn-login-udp.txt
-fi
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-m-sshovpn
-}
 
-function limitssh(){
-cd
-NUMBER_OF_CLIENTS=$(grep -c -E "^### " "/etc/xray/ssh")
-if [[ ${NUMBER_OF_CLIENTS} == '0' ]]; then
+function login_ssh(){
 clear
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC}${COLBG1}    ${WH}⇱ Limit SSH Account ⇲        ${NC} $COLOR1 $NC"
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-echo "You have no existing clients!"
-echo ""
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-m-sshovpn
-fi
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC}${COLBG1}    ${WH}⇱ Limit SSH Account ⇲        ${NC} $COLOR1 $NC"
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo "Select the existing client you want to change ip"
-echo " ketik [0] kembali kemenu"
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2-3 | nl -s ') '
-until [[ ${CLIENT_NUMBER} -ge 1 && ${CLIENT_NUMBER} -le ${NUMBER_OF_CLIENTS} ]]; do
-if [[ ${CLIENT_NUMBER} == '1' ]]; then
-read -rp "Select one client [1]: " CLIENT_NUMBER
-else
-read -rp "Select one client [1-${NUMBER_OF_CLIENTS}]: " CLIENT_NUMBER
-if [[ ${CLIENT_NUMBER} == '0' ]]; then
-m-sshovpn
-fi
-fi
-done
-until [[ $iplim =~ ^[0-9]+$ ]]; do
-read -p "Limit User (IP) New: " iplim
-done
-if [ ! -e /etc/xray/sshx ]; then
-mkdir -p /etc/xray/sshx
-fi
-if [ -z ${iplim} ]; then
-iplim="0"
-fi
-user=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2 | sed -n "${CLIENT_NUMBER}"p)
-exp=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 3 | sed -n "${CLIENT_NUMBER}"p)
-echo "${iplim}" >/etc/xray/sshx/${user}IP
-TEXT="
-━━━━━━━━━━━━━━━━━━━━
-<b>  SSH IP LIMIT</b>
-━━━━━━━━━━━━━━━━━━━━
-<b>DOMAIN   :</b> <code>${domain} </code>
-<b>ISP      :</b> <code>$ISP $CITY </code>
-<b>USERNAME :</b> <code>$user </code>
-<b>EXPIRED  :</b> <code>$exp </code>
-<b>IP LIMIT NEW :</b> <code>$iplim IP </code>
-━━━━━━━━━━━━━━━━━━━━
-<i>Succes Change IP LIMIT...</i>
-"
-curl -s --max-time $TIMES -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
-cd
-if [ ! -e /etc/tele ]; then
-echo -ne
-else
-echo "$TEXT" > /etc/notiftele
-bash /etc/tele
-fi
-clear
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo " SSH Account Was Successfully Change Limit IP"
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-echo " Client Name : $user"
-echo " Limit IP    : $iplim IP"
-echo ""
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-m-sshovpn
-}
 
-clear
-function listssh(){
-clear
-echo -e "$COLOR1╭══════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│ \033[1;37mPlease select a your Choice              $COLOR1│${NC}"
-echo -e "$COLOR1╰══════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭══════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│  [ 1 ]  \033[1;37mAUTO LOCKED USER SSH      ${NC}"
-echo -e "$COLOR1│  [ 2 ]  \033[1;37mAUTO DELETE USER SSH    ${NC}"
-echo -e "$COLOR1│  "
-echo -e "$COLOR1│  [ 0 ]  \033[1;37mBACK TO MENU    ${NC}"
-echo -e "$COLOR1╰══════════════════════════════════════════╯${NC}"
-until [[ $lock =~ ^[0-2]+$ ]]; do
-read -p "   Please select numbers 1 sampai 2 : " lock
+# 🧹 Bersihkan log sementara
+rm -f /tmp/ssh2
+sleep 2
+
+# 📄 Tentukan log file
+LOG="/var/log/auth.log"
+[ ! -e "$LOG" ] && { echo "Log tidak ditemukan: $LOG"; exit 1; }
+
+# 🔍 Ambil user home
+awk -F: '/\/home\// {print $1}' /etc/passwd > /etc/user.txt
+mapfile -t username < /etc/user.txt
+declare -a jumlah pid
+
+# 🔎 Cek login via Dropbear
+grep -i 'dropbear' "$LOG" | grep -i "Password auth succeeded" > /tmp/log-db.txt
+mapfile -t proc < <(ps aux | grep -i dropbear | awk '{print $2}')
+
+for PID in "${proc[@]}"; do
+    grep "dropbear\[$PID\]" /tmp/log-db.txt > /tmp/log-db-pid.txt
+    NUM=$(wc -l < /tmp/log-db-pid.txt)
+    USER=$(awk '{print $10}' /tmp/log-db-pid.txt | tr -d "'")
+    IP=$(awk '{print $12}' /tmp/log-db-pid.txt)
+    
+    if [[ $NUM -eq 1 ]]; then
+        TIME=$(date +'%H:%M:%S')
+        echo "$USER $TIME : $IP" >> /tmp/ssh2
+        for i in "${!username[@]}"; do
+            if [[ "${username[$i]}" == "$USER" ]]; then
+                (( jumlah[i]++ ))
+                pid[i]+=" $PID"
+            fi
+        done
+    fi
 done
-if [[ $lock == "0" ]]; then
+
+# 🔎 Cek login via OpenSSH
+grep -i "sshd" "$LOG" | grep -i "Accepted password for" > /tmp/log-db.txt
+mapfile -t sshpids < <(ps aux | grep "\[priv\]" | awk '{print $2}')
+
+for PID in "${sshpids[@]}"; do
+    grep "sshd\[$PID\]" /tmp/log-db.txt > /tmp/log-db-pid.txt
+    NUM=$(wc -l < /tmp/log-db-pid.txt)
+    USER=$(awk '{print $9}' /tmp/log-db-pid.txt)
+    IP=$(awk '{print $11}' /tmp/log-db-pid.txt)
+    
+    if [[ $NUM -eq 1 ]]; then
+        TIME=$(date +'%H:%M:%S')
+        echo "$USER $TIME : $IP" >> /tmp/ssh2
+        for i in "${!username[@]}"; do
+            if [[ "${username[$i]}" == "$USER" ]]; then
+                (( jumlah[i]++ ))
+                pid[i]+=" $PID"
+            fi
+        done
+    fi
+done
+
+# 📋 Tampilkan hasil login SSH
+for i in "${!username[@]}"; do
+    IP_LIST=$(grep -w "${username[$i]}" /tmp/ssh2 | awk '{print $3}')
+    if [[ -n "$IP_LIST" ]]; then
+        echo -e "👤 USER : ${username[$i]}"
+        echo -e "┌───────────────┬────────────┐"
+        echo -e "│ IP ADDRESS    │ METHOD     │"
+        echo -e "├───────────────┼────────────┤"
+        while read -r ip; do
+            [[ -n "$ip" ]] && printf "│ %-13s │ %-10s │\n" "$ip" "SSH"
+        done <<< "$IP_LIST"
+        echo -e "└───────────────┴────────────┘"
+        echo ""
+    fi
+done
+
+# 🔎 Cek login OpenVPN TCP
+if [[ -f "/etc/openvpn/server/openvpn-tcp.log" ]]; then
+    TCP_LOGINS=$(grep "^CLIENT_LIST" /etc/openvpn/server/openvpn-tcp.log | cut -d',' -f2,3,8)
+    if [[ -n "$TCP_LOGINS" ]]; then
+        USERS=$(echo "$TCP_LOGINS" | awk -F',' '{print $1}' | sort -u)
+        for u in $USERS; do
+            echo -e "👤 USER : $u"
+            echo -e "┌───────────────┬────────────┐"
+            echo -e "│ IP ADDRESS    │ METHOD     │"
+            echo -e "├───────────────┼────────────┤"
+            echo "$TCP_LOGINS" | grep -w "$u" | while IFS=',' read -r user realip _ rest; do
+                printf "│ %-13s │ %-10s │\n" "$realip" "OpenVPN-TCP"
+            done
+            echo -e "└───────────────┴────────────┘"
+            echo ""
+        done
+    fi
+fi
+
+# 🔎 Cek login OpenVPN UDP
+if [[ -f "/etc/openvpn/server/openvpn-udp.log" ]]; then
+    UDP_LOGINS=$(grep "^CLIENT_LIST" /etc/openvpn/server/openvpn-udp.log | cut -d',' -f2,3,8)
+    if [[ -n "$UDP_LOGINS" ]]; then
+        USERS=$(echo "$UDP_LOGINS" | awk -F',' '{print $1}' | sort -u)
+        for u in $USERS; do
+            echo -e "👤 USER : $u"
+            echo -e "┌───────────────┬────────────┐"
+            echo -e "│ IP ADDRESS    │ METHOD     │"
+            echo -e "├───────────────┼────────────┤"
+            echo "$UDP_LOGINS" | grep -w "$u" | while IFS=',' read -r user realip _ rest; do
+                printf "│ %-13s │ %-10s │\n" "$realip" "OpenVPN-UDP"
+            done
+            echo -e "└───────────────┴────────────┘"
+            echo ""
+        done
+    fi
+fi
+
+# ⏪ Kembali ke menu
+read -n 1 -s -r -p "Tekan tombol apa saja untuk kembali ke menu..."
 menu
-elif [[ $lock == "1" ]]; then
-clear
-echo "lock" > /etc/typessh
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}          ${WH}• SETTING MULTI LOGIN •            ${NC} $COLOR1│ $NC"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│$NC Succes Ganti Auto Lock  ${NC}"
-echo -e "$COLOR1│$NC Jika User Melanggar auto lock Account. ${NC}"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-sleep 1
-elif [[ $lock == "2" ]]; then
-clear
-echo "delete" > /etc/typessh
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}          ${WH}• SETTING MULTI LOGIN •            ${NC} $COLOR1│ $NC"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│$NC Succes Ganti Auto Delete Accounr ${NC}"
-echo -e "$COLOR1│$NC Jika User Melanggar auto Delete Account. ${NC}"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-sleep 1
-fi
-type=$(cat /etc/typessh)
-if [ $type = "lock" ]; then
-clear
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}          ${WH}• SETTING MULTI LOGIN •            ${NC} $COLOR1│ $NC"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│$NC SILAHKAN TULIS JUMLAH WAKTU UNTUK LOCKED  ${NC}"
-echo -e "$COLOR1│$NC BISA TULIS 15 MENIT DLL. ${NC}"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-read -rp "   Jumlah Waktu Lock: " -e notif2
-echo "${notif2}" > /etc/waktulockssh
-clear
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}          ${WH}• SETTING MULTI LOGIN •            ${NC} $COLOR1│ $NC"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "${COLOR1}│ $NC SILAHKAN TULIS JUMLAH NOTIFIKASI UNTUK AUTO LOCK    ${NC}"
-echo -e "${COLOR1}│ $NC AKUN USER YANG MULTI LOGIN     ${NC}"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-read -rp "   Jika Mau 3x Notif baru kelock tulis 3, dst: " -e notif
-cd /etc/xray/sshx
-echo "$notif" > notif
-clear
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}          ${WH}• SETTING MULTI LOGIN •            ${NC} $COLOR1│ $NC"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "${COLOR1}│ $NC SUCCES GANTI NOTIF LOCK JADI $notif $NC "
-echo -e "${COLOR1}│ $NC SUCCES GANTI TIME NOTIF LOCK JADI $notif2 MENIT $NC "
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-else
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}          ${WH}• SETTING MULTI LOGIN •            ${NC} $COLOR1│ $NC"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│$NC SILAHKAN TULIS JUMLAH WAKTU UNTUK UNTUK SCAN ${NC}"
-echo -e "$COLOR1│$NC USER YANG SEDANG MULTI LOGIN . ${NC}"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-read -rp "   Tulis Waktu Scan (Menit) : " -e notif2
-echo "# Autokill" >/etc/cron.d/tendang
-echo "SHELL=/bin/sh" >>/etc/cron.d/tendang
-echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin" >>/etc/cron.d/tendang
-echo "*/$notif2 * * * *  root /usr/bin/tendang" >>/etc/cron.d/tendang
-clear
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}          ${WH}• SETTING MULTI LOGIN •            ${NC} $COLOR1│ $NC"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "${COLOR1}│ $NC SILAHKAN TULIS JUMLAH NOTIFIKASI UNTUK AUTO LOCK    ${NC}"
-echo -e "${COLOR1}│ $NC AKUN USER YANG MULTI LOGIN     ${NC}"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-read -rp "   Jika Mau 3x Notif baru kelock tulis 3, dst: " -e notif
-cd /etc/xray/sshx
-echo "$notif" > notif
-clear
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│${NC} ${COLBG1}          ${WH}• SETTING MULTI LOGIN •            ${NC} $COLOR1│ $NC"
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯{NC}"
-echo -e "$COLOR1╭═══════════════════════════════════════════════╮${NC}"
-echo -e "${COLOR1}│ $NC SUCCES GANTI NOTIF LOCK JADI $notif $NC "
-echo -e "${COLOR1}│ $NC SUCCES GANTI TIME NOTIF LOCK JADI $notif2 MENIT $NC "
-echo -e "$COLOR1╰═══════════════════════════════════════════════╯${NC}"
-fi
-read -n 1 -s -r -p "Press any key to back on menu"
-m-sshovpn
 }
 
-function lockssh(){
+
+function limit_ssh(){
 clear
-cd
-if [ ! -e /etc/xray/sshx/listlock ]; then
-echo "" > /etc/xray/sshx/listlock
-fi
-NUMBER_OF_CLIENTS=$(grep -c -E "^### " "/etc/xray/sshx/listlock")
+
+# Hitung jumlah user SSH dari file konfigurasi
+NUMBER_OF_CLIENTS=$(grep -c -E "^### " "/etc/xray/ssh")
+
+# Jika tidak ada user, tampilkan pesan dan kembali ke menu
 if [[ ${NUMBER_OF_CLIENTS} == '0' ]]; then
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC}${COLBG1}    ${WH}⇱ Unlock SSH Account ⇲       ${NC} $COLOR1 $NC"
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-echo "You have no existing user Lock!"
-echo ""
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-read -n 1 -s -r -p "Press any key to back on menu"
-m-sshovpn
+    clear
+    echo "Tidak ada user!"
+    read -n 1 -s -r -p "Press any key to back to menu"
+    m-sshovpn
+    exit 0
 fi
+
+# Tampilkan daftar user
 clear
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC}${COLBG1}    ${WH}⇱ Unlock SSH Account ⇲       ${NC} $COLOR1 $NC"
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo " Select the existing client you want to Unlock"
-echo " ketik [0] kembali kemenu"
-echo " tulis clear untuk delete semua Akun"
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo "     No  User      Expired"
-grep -E "^### " "/etc/xray/sshx/listlock" | cut -d ' ' -f 2-3 | nl -s ') '
-until [[ ${CLIENT_NUMBER} -ge 1 && ${CLIENT_NUMBER} -le ${NUMBER_OF_CLIENTS} ]]; do
-if [[ ${CLIENT_NUMBER} == '1' ]]; then
-read -rp "Select one client [1]: " CLIENT_NUMBER
-else
-read -rp "Select one client [1-${NUMBER_OF_CLIENTS}] to Unlock: " CLIENT_NUMBER
-if [[ ${CLIENT_NUMBER} == '0' ]]; then
-m-sshovpn
-fi
-if [[ ${CLIENT_NUMBER} == 'clear' ]]; then
-rm /etc/xray/sshx/listlock
-m-sshovpn
-fi
-fi
+echo "Select the existing client you want to change IP limit"
+echo "Ketik [0] untuk kembali ke menu"
+
+# Tampilkan daftar user dengan nomor
+grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2-3 | nl -s ') '
+
+# Loop hingga user memilih client yang valid
+until [[ ${CLIENT_NUMBER} =~ ^[0-9]+$ && ${CLIENT_NUMBER} -ge 1 && ${CLIENT_NUMBER} -le ${NUMBER_OF_CLIENTS} ]]; do
+    read -rp "Select one client [1-${NUMBER_OF_CLIENTS} or 0 to cancel]: " CLIENT_NUMBER
+    if [[ ${CLIENT_NUMBER} == '0' ]]; then
+        m-sshovpn
+        exit 0
+    fi
 done
-user=$(grep -E "^### " "/etc/xray/sshx/listlock" | cut -d ' ' -f 2 | sed -n "${CLIENT_NUMBER}"p)
-exp=$(grep -E "^### " "/etc/xray/sshx/listlock" | cut -d ' ' -f 3 | sed -n "${CLIENT_NUMBER}"p)
-pass=$(grep -E "^### " "/etc/xray/sshx/listlock" | cut -d ' ' -f 4 | sed -n "${CLIENT_NUMBER}"p)
-passwd -u $user &> /dev/null
-echo -e "### $Login $exp $Pass" >> /etc/xray/ssh
-sed -i "/^### $user $exp $pass/d" /etc/xray/sshx/listlock &> /dev/null
-TEXT="
+
+# Validasi input IP limit
+until [[ ${iplim} =~ ^[0-9]+$ ]]; do
+    read -rp "Limit User (IP) Baru: " iplim
+done
+
+# Pastikan direktori penyimpanan limit IP ada
+mkdir -p /etc/xray/sshx
+
+# Ambil username dan expiry dari daftar berdasarkan pilihan user
+user=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 2 | sed -n "${CLIENT_NUMBER}p")
+exp=$(grep -E "^### " "/etc/xray/ssh" | cut -d ' ' -f 3 | sed -n "${CLIENT_NUMBER}p")
+
+# Simpan IP limit ke file
+echo "${iplim}" > /etc/xray/sshx/${user}IP
+
+MSG1=$(cat <<EOF
 ━━━━━━━━━━━━━━━━━━━━
-<b>  SSH UNLOK </b>
-<code>◇━━━━━━━━━━━━━━◇
-<b>DOMAIN   :</b> <code>${domain} </code>
-<b>ISP      :</b> <code>$ISP $CITY </code>
-<b>USERNAME :</b> <code>$user </code>
-<b>IP LIMIT  :</b> <code>$iplim IP </code>
-<b>EXPIRED  :</b> <code>$exp </code>
+<b>SETTING LIMIT LOGIN</b>
 ━━━━━━━━━━━━━━━━━━━━
-<i>Succes Unlock Akun...</i>
-"
-curl -s --max-time $TIMES -d "chat_id=$CHATID&disable_web_page_preview=1&text=$TEXT&parse_mode=html" $URL >/dev/null
-cd
-if [ ! -e /etc/tele ]; then
-echo -ne
-else
-echo "$TEXT" > /etc/notiftele
-bash /etc/tele
-fi
-clear
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo " SSH Account Unlock Successfully"
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo " Client Name : $user"
-echo " Status  : Unlocked"
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-m-sshovpn
-}
+<b>Domain :</b> <code>${DOMAINZ}</code>
+<b>ISP :</b> <code>${ISP}</code>
+<b>Kota :</b> <code>${CITY}</code>
+<b>Username :</b> <code>${user}</code>
+<b>Limit Baru :</b> <code>${iplim} IP</code>
+<b>Expired :</b> <code>${exp}</code>
+━━━━━━━━━━━━━━━━━━━━
+EOF
+)
+
+curl -s --max-time ${TIMES} -d "chat_id=${CHAT_ID2}&disable_web_page_preview=1&text=${MSG}&parse_mode=html" ${URL} >/dev/null
 
 clear
-author=$(cat /etc/profil)
-echo -e " $COLOR1╭════════════════════════════════════════════════════╮${NC}"
-echo -e " $COLOR1│${NC} ${COLBG1}            ${WH}• SSH PANEL MENU •                    ${NC} $COLOR1│ $NC"
-echo -e " $COLOR1╰════════════════════════════════════════════════════╯${NC}"
-echo -e " $COLOR1╭════════════════════════════════════════════════════╮${NC}"
-echo -e " $COLOR1│ $NC  ${WH}[${COLOR1}01${WH}]${NC} ${COLOR1}• ${WH}ADD AKUN${NC}        ${WH}[${COLOR1}05${WH}]${NC} ${COLOR1}• ${WH}CEK USER ONLINE${NC}    $COLOR1│ $NC"
-echo -e " $COLOR1│ $NC  ${WH}[${COLOR1}02${WH}]${NC} ${COLOR1}• ${WH}TRIAL AKUN${NC}      ${WH}[${COLOR1}06${WH}]${NC} ${COLOR1}• ${WH}CEK USER CONFIG${NC}    $COLOR1│ $NC"
-echo -e " $COLOR1│ $NC  ${WH}[${COLOR1}03${WH}]${NC} ${COLOR1}• ${WH}RENEW AKUN${NC}      ${WH}[${COLOR1}07${WH}]${NC} ${COLOR1}• ${WH}CHANGE IP LIMIT${NC}    $COLOR1│ $NC"
-echo -e " $COLOR1│ $NC  ${WH}[${COLOR1}04${WH}]${NC} ${COLOR1}• ${WH}DELETE AKUN${NC}     ${WH}[${COLOR1}08${WH}]${NC} ${COLOR1}• ${WH}SETTING LOCK LOGIN${NC} $COLOR1│ $NC"
-echo -e " $COLOR1│ $NC  ${WH}[${COLOR1}00${WH}]${NC} ${COLOR1}• ${WH}GO BACK${NC}         ${WH}[${COLOR1}09${WH}]${NC} ${COLOR1}• ${WH}UNLOCK LOGIN${NC}      $COLOR1 │$NC"
-echo -e " $COLOR1╰════════════════════════════════════════════════════╯${NC}"
-echo -e " $COLOR1╭═════════════════════════ ${WH}BY${NC} ${COLOR1}═══════════════════════╮ ${NC}"
-echo -e "  $COLOR1${NC}              ${WH}   • $author •                 $COLOR1 $NC"
-echo -e " $COLOR1╰════════════════════════════════════════════════════╯${NC}"
-echo -e ""
-echo -ne " ${WH}Select menu ${COLOR1}: ${WH}"; read opt
+
+info=$(cat <<EOF
+━━━━━━━━━━━━━━━━━━━━
+SETTING LIMIT LOGIN
+━━━━━━━━━━━━━━━━━━━━
+Domain : ${DOMAINZ}
+ISP : ${ISP}
+Kota : ${CITY}
+Username : ${user}
+Limit Baru : ${iplim} IP
+Expired : ${exp}
+━━━━━━━━━━━━━━━━━━━━
+EOF
+)
+
+# Tampilkan log
+echo -e "${info}"
+
+read -n 1 -s -r -p "Press any key to back to menu"
+menu
+}
+
+
+function scan_ssh(){
+clear
+
+LOCK_FILE="/etc/typessh"
+CRON_FILE="/etc/cron.d/tendang"
+
+# Fungsi menampilkan status autolock
+show_status() {
+    if [[ -f "$LOCK_FILE" && $(<"$LOCK_FILE") == "lock" ]]; then
+        echo -e "🔒 Status Auto Lock: \033[1;32mON\033[0m"
+    else
+        echo -e "🔓 Status Auto Lock: \033[1;31mOFF\033[0m"
+    fi
+}
+
+# Tampilkan status awal
+clear
+
+show_status
+echo -e "1) Aktifkan Auto Lock"
+echo -e "2) Nonaktifkan Auto Lock"
+echo -e "3) Keluar"
+echo -ne "\nPilih opsi [1-3]: "
+read opsi
+
+case $opsi in
+    1)
+        echo "lock" > "$LOCK_FILE"
+        echo -e "\n✅ Auto Lock telah diaktifkan."
+        echo -e "Jika user melanggar, akun akan dikunci otomatis."
+
+        # Minta input interval waktu scan (menit)
+        while true; do
+            read -rp "🕒 Masukkan interval scan (dalam menit): " notif2
+            if [[ $notif2 =~ ^[0-9]+$ ]]; then
+                break
+            else
+                echo "⚠️ Masukkan hanya angka."
+            fi
+        done
+
+        # Tulis cron job untuk eksekusi tendang
+        cat > "$CRON_FILE" <<EOF
+# Autokill SSH User
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+*/$notif2 * * * * root /usr/bin/tendang
+EOF
+        echo -e "✅ Cron Auto Lock diatur setiap $notif2 menit."
+        ;;
+
+    2)
+        # Nonaktifkan autolock
+        rm -f "$LOCK_FILE"
+        rm -f "$CRON_FILE"
+        echo -e "\n❌ Auto Lock telah dinonaktifkan."
+        ;;
+
+    3)
+        menu
+        ;;
+
+    *)
+        echo -e "\n❌ Opsi tidak valid."
+        ;;
+esac
+
+read -n 1 -s -r -p "Press any key to back to menu"
+menu
+}
+
+
+function unlock_ssh(){
+clear
+
+LISTLOCK="/etc/xray/sshx/listlock"
+
+# Pastikan file listlock ada
+[[ ! -e $LISTLOCK ]] && echo "" > $LISTLOCK
+
+# Hitung jumlah user yang terkunci
+NUMBER_OF_CLIENTS=$(grep -c -E "^### " "$LISTLOCK")
+
+# Jika tidak ada user terkunci
+if [[ $NUMBER_OF_CLIENTS == "0" ]]; then
+    echo -e "⚠️  Tidak ada user yang terkunci.\n"
+    read -n 1 -s -r -p "Tekan tombol apa saja untuk kembali ke menu..."
+    m-sshovpn
+    exit 0
+fi
+
+# Tampilkan menu unlock
+clear
+echo " Pilih user yang ingin di-unlock:"
+echo "   • Ketik [0] untuk kembali ke menu"
+echo "   • Ketik [clear] untuk menghapus semua akun terkunci"
+echo ""
+echo "     No | Username | Expired"
+grep -E "^### " "$LISTLOCK" | cut -d ' ' -f 2-3 | nl -s ') '
+
+# Input pilihan user
+while true; do
+    read -rp "Pilih user [1-${NUMBER_OF_CLIENTS}]: " CLIENT_NUMBER
+
+    case $CLIENT_NUMBER in
+        0)
+            m-sshovpn
+            exit 0
+            ;;
+        clear)
+            rm -f "$LISTLOCK"
+            echo -e "\n✅ Semua akun terkunci telah dihapus!"
+            sleep 1
+            m-sshovpn
+            exit 0
+            ;;
+        *)
+            if [[ $CLIENT_NUMBER =~ ^[0-9]+$ && $CLIENT_NUMBER -ge 1 && $CLIENT_NUMBER -le $NUMBER_OF_CLIENTS ]]; then
+                break
+            else
+                echo "⚠️  Input tidak valid, silakan coba lagi."
+            fi
+            ;;
+    esac
+done
+
+# Ambil data user berdasarkan input
+user=$(grep -E "^### " "$LISTLOCK" | cut -d ' ' -f2 | sed -n "${CLIENT_NUMBER}p")
+exp=$(grep -E "^### " "$LISTLOCK" | cut -d ' ' -f3 | sed -n "${CLIENT_NUMBER}p")
+pass=$(grep -E "^### " "$LISTLOCK" | cut -d ' ' -f4 | sed -n "${CLIENT_NUMBER}p")
+
+# Unlock akun
+passwd -u "$user" &>/dev/null
+
+# Tambahkan kembali ke daftar aktif
+echo "### $user $exp $pass" >> /etc/xray/ssh
+
+# Hapus dari listlock
+sed -i "/^### $user $exp $pass/d" "$LISTLOCK" &>/dev/null
+
+echo -e "\n✅ Akun '${user}' berhasil di-unlock!"
+
+read -n 1 -s -r -p "Press any key to back to menu"
+menu
+}
+
+
+clear
+
+# Buat garis horizontal sepanjang 44 karakter
+LINE=$(printf '━%.0s' {1..44})
+
+clear
+echo -e "${COLOR1}╭${LINE}╮${NC}"
+echo -e "${COLOR1}│${NC} ${COLBG1}${WH}  • SSH PANEL MENU •${NC}"
+echo -e "${COLOR1}╰${LINE}╯${NC}\n"
+
+echo -e "${COLOR1}╭${LINE}╮${NC}"
+echo -e "${COLOR1}│${NC}  ${WH}[01]${NC} ${COLOR1}• ${WH}ADD AKUN${NC}"
+echo -e "${COLOR1}│${NC}  ${WH}[02]${NC} ${COLOR1}• ${WH}TRIAL AKUN${NC}"
+echo -e "${COLOR1}│${NC}  ${WH}[03]${NC} ${COLOR1}• ${WH}RENEW AKUN${NC}"
+echo -e "${COLOR1}│${NC}  ${WH}[04]${NC} ${COLOR1}• ${WH}DELETE AKUN${NC}"
+echo -e "${COLOR1}│${NC}  ${WH}[05]${NC} ${COLOR1}• ${WH}CEK USER ONLINE${NC}"
+echo -e "${COLOR1}│${NC}  ${WH}[06]${NC} ${COLOR1}• ${WH}CEK USER CONFIG${NC}"
+echo -e "${COLOR1}│${NC}  ${WH}[07]${NC} ${COLOR1}• ${WH}CHANGE IP LIMIT${NC}"
+echo -e "${COLOR1}│${NC}  ${WH}[08]${NC} ${COLOR1}• ${WH}SETTING AUTOLOCK${NC}"
+echo -e "${COLOR1}│${NC}  ${WH}[09]${NC} ${COLOR1}• ${WH}UNLOCK LOGIN${NC}"
+echo -e "${COLOR1}│${NC}  ${WH}[10]${NC} ${COLOR1}• ${WH}DELETE LOCKED${NC}"
+echo -e "${COLOR1}│${NC}  ${WH}[00]${NC} ${COLOR1}• ${WH}GO BACK${NC}"
+echo -e "${COLOR1}╰${LINE}╯${NC}\n"
+
+# Prompt pemilihan menu
+echo -ne " ${WH}Select menu ${COLOR1}: ${WH}" && read opt
+
+# Eksekusi sesuai pilihan
 case $opt in
-01 | 1) clear ; usernew ; exit ;;
-02 | 2) clear ; trial ; exit ;;
-03 | 3) clear ; renew ; exit ;;
-04 | 4) clear ; hapus ; exit ;;
-05 | 5) clear ; cek ; exit ;;
-06 | 6) clear ; cekconfig ; exit ;;
-07 | 7) clear ; limitssh; exit ;;
-08 | 8) clear ; listssh ; exit ;;
-09 | 9) clear ; lockssh ; exit ;;
-10 | 10) clear ; hapuslama ; exit ;;
-00 | 0) clear ; menu ; exit ;;
-X  | 0) clear ; m-sshovpn ;;
-x) exit ;;
-*) echo "Anda salah tekan " ; sleep 1 ; m-sshovpn ;;
+    1|01)    clear; add_ssh           ;;
+    2|02)    clear; trial_ssh         ;;
+    3|03)    clear; renew_ssh         ;;
+    4|04)    clear; hapus_ssh         ;;
+    5|05)    clear; login_ssh         ;;
+    6|06)    clear; check_ssh         ;;
+    7|07)    clear; limit_ssh         ;;
+    8|08)    clear; scan_ssh          ;;
+    9|09)    clear; unlock_ssh        ;;
+   10)       clear; delete_lock_ssh  ;;
+    0|00)    clear; menu              ;;
+    x|X)     clear; m-sshovpn         ;;
+    *)       echo -e "\n${COLOR1}⚠️  Input tidak valid!${NC}"; sleep 1; m-sshovpn ;;
 esac

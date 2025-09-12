@@ -1,860 +1,826 @@
 #!/bin/bash
-biji=`date +"%Y-%m-%d" -d "$dateFromServer"`
+
 colornow=$(cat /etc/rmbl/theme/color.conf)
 NC="\e[0m"
 RED="\033[0;31m"
 COLOR1="$(cat /etc/rmbl/theme/$colornow | grep -w "TEXT" | cut -d: -f2|sed 's/ //g')"
 COLBG1="$(cat /etc/rmbl/theme/$colornow | grep -w "BG" | cut -d: -f2|sed 's/ //g')"
 WH='\033[1;37m'
-ipsaya=$(wget -qO- ifconfig.me)
-data_server=$(curl -v --insecure --silent https://google.com/ 2>&1 | grep Date | sed -e 's/< Date: //')
-date_list=$(date +"%Y-%m-%d" -d "$data_server")
-data_ip="https://raw.githubusercontent.com/Fuuhou/izin/main/ip"
-checking_sc() {
-useexp=$(curl -sS $data_ip | grep $ipsaya | awk '{print $3}')
-if [[ $date_list < $useexp ]]; then
-echo -ne
-else
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1}          ${WH}• AUTOSCRIPT PREMIUM •               ${NC} $COLOR1 $NC"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭═════════════════════════════════════════════════╮${NC}"
-echo -e "            ${RED}PERMISSION DENIED !${NC}"
-echo -e "   \033[0;33mYour VPS${NC} $ipsaya \033[0;33mHas been Banned${NC}"
-echo -e "     \033[0;33mBuy access permissions for scripts${NC}"
-echo -e "             \033[0;33mContact Your Admin ${NC}"
-echo -e "$COLOR1╰═════════════════════════════════════════════════╯${NC}"
-exit
-fi
-}
-#checking_sc
-function add-host(){
-CMD[0]="$1"
-CMD[1]="$2"
-(
-[[ -e $HOME/fim ]] && rm $HOME/fim
-${CMD[0]} -y >/dev/null 2>&1
-${CMD[1]} -y >/dev/null 2>&1
-touch $HOME/fim
-) >/dev/null 2>&1 &
-tput civis
-echo -ne "  \033[0;33mUodate Domain... \033[1;37m- \033[0;33m["
-while true; do
-for ((i = 0; i < 18; i++)); do
-echo -ne "\033[0;32m#"
-sleep 0.1s
-done
-[[ -e $HOME/fim ]] && rm $HOME/fim && break
-echo -e "\033[0;33m]"
-sleep 1s
-tput cuu1
-tput dl1
-echo -ne "  \033[0;33mUpdate Domain... \033[1;37m- \033[0;33m["
-done
-echo -e "\033[0;33m]\033[1;37m -\033[1;32m Succes !\033[1;37m"
-tput cnormc
-clear
-echo -e  "$COLOR1╭══════════════════════════════════════════╮${NC}"
-echo -e  "$COLOR1│             ${WH}TERIMA KASIH                 $COLOR1│${NC}"
-echo -e  "$COLOR1│        ${WH}SUDAH MENGGUNAKAN SCRIPT          $COLOR1│${NC}"
-echo -e  "$COLOR1│               ${WH}DARI SAYA                  $COLOR1│${NC}"
-echo -e  "$COLOR1╰══════════════════════════════════════════╯${NC}"
-echo " "
-until [[ $dnss =~ ^[a-zA-Z0-9_.-]+$ ]]; do
-read -rp "Masukan domain kamu Disini : " -e dnss
-done
-echo ""
-echo "$dnss" > /etc/xray/domain
-echo "$dnss" > /etc/root/domain
-echo "IP=$dnss" > /var/lib/kyt/ipvps.conf
-read -n 1 -s -r -p "  Press any key to Back Menu"
-certv2ray
-clear
-echo -e " Back To Menu"
-sleep 1
-menu
+
+
+function add-host() {
+    clear
+
+    # === Jalankan proses latar belakang update (jika ada perintah tambahan) ===
+    CMD[0]="$1"
+    CMD[1]="$2"
+    (
+        [[ -e "$HOME/fim" ]] && rm -f "$HOME/fim"
+        ${CMD[0]} -y >/dev/null 2>&1
+        ${CMD[1]} -y >/dev/null 2>&1
+        touch "$HOME/fim"
+    ) >/dev/null 2>&1 &
+
+    # === Progress Bar Visual ===
+    tput civis
+    echo -ne "  \033[0;33mUpdate Domain... \033[1;37m- \033[0;33m["
+    while true; do
+        for ((i = 0; i < 18; i++)); do
+            echo -ne "\033[0;32m#"
+            sleep 0.1
+        done
+        if [[ -e "$HOME/fim" ]]; then
+            rm -f "$HOME/fim"
+            break
+        fi
+        echo -e "\033[0;33m]"
+        sleep 1
+        tput cuu1
+        tput dl1
+        echo -ne "  \033[0;33mUpdate Domain... \033[1;37m- \033[0;33m["
+    done
+    echo -e "\033[0;33m]\033[1;37m -\033[1;32m Sukses!\033[1;37m"
+    tput cnorm
+    clear
+
+    # === Input domain utama ===
+    local dnss=""
+    until [[ "$dnss" =~ ^[a-zA-Z0-9_.-]+$ ]]; do
+        read -rp "🌐 Masukkan domain utama: " -e dnss
+    done
+
+    # === Input NS domain ===
+    local nss=""
+    until [[ "$nss" =~ ^[a-zA-Z0-9_.-]+$ ]]; do
+        read -rp "🛰️ Masukkan NS domain (contoh: ns1.${dnss}): " -e nss
+    done
+
+    # === Persiapan direktori (jika belum ada) ===
+    mkdir -p /etc/xray /etc/v2ray /etc/domain /etc/per /root /var/lib/kyt
+
+    # === Simpan subdomain dan NS domain ke semua lokasi terkait ===
+    echo "$dnss" | tee \
+        /etc/xray/domain \
+        /etc/xray/scdomain \
+        /etc/v2ray/domain \
+        /etc/v2ray/scdomain \
+        /etc/domain/subdomain \
+        /root/domain \
+        >/dev/null
+
+    echo "$nss" > /etc/domain/nsdomain
+    echo "IP=$dnss" > /var/lib/kyt/ipvps.conf
+
+    # === Eksekusi pembaruan sertifikat SSL jika diperlukan ===
+    certv2ray
+
+    # === Kembali ke menu utama ===
+    echo -e "\n🔁 Kembali ke menu..."
+    sleep 1
+    menu
 }
 
-function auto-reboot(){
-clear
-if [ ! -e /etc/cron.d/re_otm ]; then
-rm -rf /etc/cron.d/re_otm
-fi
-if [ ! -e /usr/local/bin/reboot_otomatis ]; then
-echo '#!/bin/bash' > /usr/local/bin/reboot_otomatis
-echo 'tanggal=$(date +"%m-%d-%Y")' >> /usr/local/bin/reboot_otomatis
-echo 'waktu=$(date +"%T")' >> /usr/local/bin/reboot_otomatis
-echo 'echo "Server successfully rebooted on the date of $tanggal hit $waktu." >> /etc/log-reboot.txt' >> /usr/local/bin/reboot_otomatis
-echo '/sbin/shutdown -r now' >> /usr/local/bin/reboot_otomatis
-chmod +x /usr/local/bin/reboot_otomatis
-fi
-clear
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e "\e[0;100;33m       • AUTO-REBOOT MENU •        \e[0m"
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e ""
-echo -e "[\e[36m•1\e[0m] Set Auto-Reboot Setiap 1 Jam"
-echo -e "[\e[36m•2\e[0m] Set Auto-Reboot Setiap 6 Jam"
-echo -e "[\e[36m•3\e[0m] Set Auto-Reboot Setiap 12 Jam"
-echo -e "[\e[36m•4\e[0m] Set Auto-Reboot Setiap 1 Hari"
-echo -e "[\e[36m•5\e[0m] Set Auto-Reboot Setiap 1 Minggu"
-echo -e "[\e[36m•6\e[0m] Set Auto-Reboot Setiap 1 Bulan"
-echo -e "[\e[36m•7\e[0m] Set Auto-Rebooot CPU 100%"
-echo -e "[\e[36m•8\e[0m] Matikan Auto-Reboot & Auto-Reboot CPU 100%"
-echo -e "[\e[36m•9\e[0m] View reboot log"
-echo -e "[\e[36m•10\e[0m] Remove reboot log"
-echo -e ""
-echo -e " [\e[31m•0\e[0m] \e[31mBACK TO MENU\033[0m"
-echo -e ""
-echo -e "Press x or [ Ctrl+C ] • To-Exit"
-echo -e ""
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e ""
-read -p " Select menu : " x
-if test $x -eq 1; then
-echo "10 * * * * root /usr/local/bin/reboot_otomatis" > /etc/cron.d/reboot_otomatis
-echo "Auto-Reboot has been set every an hour."
-sleep 2
-menu
-elif test $x -eq 2; then
-echo "10 */6 * * * root /usr/local/bin/reboot_otomatis" > /etc/cron.d/reboot_otomatis
-echo "Auto-Reboot has been successfully set every 6 hours."
-sleep 2
-menu
-elif test $x -eq 3; then
-echo "10 */12 * * * root /usr/local/bin/reboot_otomatis" > /etc/cron.d/reboot_otomatis
-echo "Auto-Reboot has been successfully set every 12 hours."
-sleep 2
-menu
-elif test $x -eq 4; then
-echo -e " CONTOH FORMAT Tiap jam 5 Subuh Tulis 5 "
-read -p " Waktu Restart : " wkt
-echo "0 $wkt * * * root /usr/local/bin/reboot_otomatis" > /etc/cron.d/reboot_otomatis
-echo "Auto-Reboot has been successfully set once a day."
-sleep 2
-menu
-elif test $x -eq 5; then
-echo -e " CONTOH FORMAT Tiap jam 8 Malam Tulis 20 "
-read -p " Waktu Restart : " wkt2
-echo "10 $wkt2 */7 * * root /usr/local/bin/reboot_otomatis" > /etc/cron.d/reboot_otomatis
-echo "Auto-Reboot has been successfully set once a week."
-sleep 2
-menu
-elif test $x -eq 6; then
-echo -e " CONTOH FORMAT Tiap jam 10 Malam Tulis 20 "
-read -p " Waktu Restart : " wkt3
-echo "10 $wkt3 1 * * root /usr/local/bin/reboot_otomatis" > /etc/cron.d/reboot_otomatis
-echo "Auto-Reboot has been successfully set once a month."
-sleep 2
-menu
-elif test $x -eq 7; then
-cat> /etc/cron.d/autocpu << END
+function auto_reboot() {
+    clear
+
+    # Hapus cron lama jika ada
+    [[ -f /etc/cron.d/re_otm ]] && rm -f /etc/cron.d/re_otm
+
+    # Buat skrip reboot otomatis jika belum ada
+    if [[ ! -f /usr/local/bin/reboot_otomatis ]]; then
+        cat > /usr/local/bin/reboot_otomatis <<-EOF
+#!/bin/bash
+tanggal=\$(date +"%m-%d-%Y")
+waktu=\$(date +"%T")
+echo "Server successfully rebooted on \$tanggal at \$waktu." >> /etc/log-reboot.txt
+/sbin/shutdown -r now
+EOF
+        chmod +x /usr/local/bin/reboot_otomatis
+    fi
+
+    # Tampilan menu
+    echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo -e "\e[0;100;33m         • AUTO-REBOOT MENU •          \e[0m"
+    echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo -e ""
+    echo -e "[\e[36m1\e[0m] Auto-Reboot setiap 1 jam"
+    echo -e "[\e[36m2\e[0m] Auto-Reboot setiap 6 jam"
+    echo -e "[\e[36m3\e[0m] Auto-Reboot setiap 12 jam"
+    echo -e "[\e[36m4\e[0m] Auto-Reboot setiap hari"
+    echo -e "[\e[36m5\e[0m] Auto-Reboot setiap minggu"
+    echo -e "[\e[36m6\e[0m] Auto-Reboot setiap bulan"
+    echo -e "[\e[36m7\e[0m] Auto-Reboot saat CPU 100%"
+    echo -e "[\e[36m8\e[0m] Nonaktifkan Auto-Reboot & CPU 100%"
+    echo -e "[\e[36m9\e[0m] Tampilkan log reboot"
+    echo -e "[\e[36m10\e[0m] Hapus log reboot"
+    echo -e ""
+    echo -e "[\e[31m0\e[0m] Kembali ke menu utama"
+    echo -e ""
+    echo -e "Tekan x atau [Ctrl+C] untuk keluar"
+    echo -e ""
+    echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo -ne "Pilih menu : "; read -r opt
+    echo ""
+
+    case $opt in
+        1)
+            echo "10 * * * * root /usr/local/bin/reboot_otomatis" > /etc/cron.d/reboot_otomatis
+            echo "✅ Auto-Reboot setiap 1 jam diaktifkan."
+            ;;
+        2)
+            echo "10 */6 * * * root /usr/local/bin/reboot_otomatis" > /etc/cron.d/reboot_otomatis
+            echo "✅ Auto-Reboot setiap 6 jam diaktifkan."
+            ;;
+        3)
+            echo "10 */12 * * * root /usr/local/bin/reboot_otomatis" > /etc/cron.d/reboot_otomatis
+            echo "✅ Auto-Reboot setiap 12 jam diaktifkan."
+            ;;
+        4)
+            read -p "🕐 Jam reboot harian (contoh 5 = jam 5 pagi): " jam
+            echo "0 $jam * * * root /usr/local/bin/reboot_otomatis" > /etc/cron.d/reboot_otomatis
+            echo "✅ Auto-Reboot harian di jam $jam diaktifkan."
+            ;;
+        5)
+            read -p "🕐 Jam reboot mingguan (contoh 20 = jam 8 malam): " jam
+            echo "10 $jam */7 * * root /usr/local/bin/reboot_otomatis" > /etc/cron.d/reboot_otomatis
+            echo "✅ Auto-Reboot mingguan di jam $jam diaktifkan."
+            ;;
+        6)
+            read -p "🕐 Jam reboot bulanan (contoh 20 = jam 8 malam): " jam
+            echo "10 $jam 1 * * root /usr/local/bin/reboot_otomatis" > /etc/cron.d/reboot_otomatis
+            echo "✅ Auto-Reboot bulanan di jam $jam diaktifkan."
+            ;;
+        7)
+            cat > /etc/cron.d/autocpu <<-EOF
 SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 */7 * * * * root /usr/bin/autocpu
-END
-echo "Auto-Reboot CPU 100% TURN ON."
-sleep 2
-menu
-elif test $x -eq 8; then
-rm -f /etc/cron.d/reboot_otomatis
-rm -f /etc/cron.d/autocpu
-echo "Auto-Reboot successfully TURNED OFF."
-sleep 2
-menu
-elif test $x -eq 9; then
-if [ ! -e /etc/log-reboot.txt ]; then
-clear
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1}       ${WH} • AUTO-REBOOT •        ${NC} $COLOR1 $NC"
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-echo "No reboot activity found"
-echo -e ""
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-auto-reboot
-else
-clear
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1}        ${WH}• AUTO-REBOOT •        ${NC} $COLOR1 $NC"
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-echo 'LOG REBOOT'
-cat /etc/log-reboot.txt
-echo -e ""
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-auto-reboot
-fi
-elif test $x -eq 10; then
-clear
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1}        ${WH}• AUTO-REBOOT •        ${NC} $COLOR1 $NC"
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-echo "" > /etc/log-reboot.txt
-echo "Auto Reboot Log successfully deleted!"
-echo -e ""
-echo -e "$COLOR1━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-auto-reboot
-elif test $x -eq 0; then
-clear
-menu
-else
-clear
-echo ""
-echo "Options Not Found In Menu"
-echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-auto-reboot
-fi
+EOF
+            echo "✅ Auto-Reboot CPU 100% diaktifkan."
+            ;;
+        8)
+            rm -f /etc/cron.d/reboot_otomatis /etc/cron.d/autocpu
+            echo "🛑 Auto-Reboot dan Auto-Reboot CPU 100% dinonaktifkan."
+            ;;
+        9)
+            clear
+            echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+            echo -e "\e[0;100;33m          • LOG REBOOT •               \e[0m"
+            echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+            if [[ ! -f /etc/log-reboot.txt || ! -s /etc/log-reboot.txt ]]; then
+                echo -e "⚠️  Belum ada aktivitas reboot tercatat."
+            else
+                cat /etc/log-reboot.txt
+            fi
+            echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+            read -n 1 -s -r -p "Tekan tombol apapun untuk kembali..."
+            auto_reboot
+            return
+            ;;
+        10)
+            > /etc/log-reboot.txt
+            echo "🧹 Log reboot berhasil dihapus."
+            ;;
+        0)
+            menu
+            return
+            ;;
+        x|X)
+            exit 0
+            ;;
+        *)
+            echo "❌ Pilihan tidak valid."
+            ;;
+    esac
+
+    sleep 2
+    auto_reboot
 }
-function bw(){
-clear
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1}      • BANDWITH MONITOR •         ${NC} $COLOR1 $NC"
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-echo -e " ${WH}[${COLOR1}•1${WH}]${NC} ${COLOR1} Lihat Total Bandwith Tersisa"
-echo -e " ${WH}[${COLOR1}•2${WH}]${NC} ${COLOR1} Tabel Penggunaan Setiap 5 Menit"
-echo -e " ${WH}[${COLOR1}•3${WH}]${NC} ${COLOR1} Tabel Penggunaan Setiap Jam"
-echo -e " ${WH}[${COLOR1}•4${WH}]${NC} ${COLOR1} Tabel Penggunaan Setiap Hari"
-echo -e " ${WH}[${COLOR1}•5${WH}]${NC} ${COLOR1} Tabel Penggunaan Setiap Bulan"
-echo -e " ${WH}[${COLOR1}•6${WH}]${NC} ${COLOR1} Tabel Penggunaan Setiap Tahun"
-echo -e " ${WH}[${COLOR1}•7${WH}]${NC} ${COLOR1} Tabel Penggunaan Tertinggi"
-echo -e " ${WH}[${COLOR1}•8${WH}]${NC} ${COLOR1} Statistik Penggunaan Setiap Jam"
-echo -e " ${WH}[${COLOR1}•9${WH}]${NC} ${COLOR1} Lihat Penggunaan Aktif Saat Ini"
-echo -e " ${WH}[${COLOR1}10${WH}]${NC} ${COLOR1} Lihat Trafik Penggunaan Aktif Saat Ini [5s]"
-echo -e ""
-echo -e " [\e[31m•0${WH}]${NC} ${COLOR1} \e[31mBACK TO MENU${NC}"
-echo -e " [\e[31m•x${WH}]${NC} ${COLOR1} Keluar"
-echo -e ""
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-read -p " Select menu : " opt
-echo -e ""
-case $opt in
-1)
-clear
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1} • TOTAL BANDWITH SERVER TERSISA • ${NC} $COLOR1 $NC"
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-vnstat
-echo -e ""
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-read -n 1 -s -r -p "Press any key to back on menu"
-bw
-;;
-2)
-clear
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1} • TOTAL BANDWITH SETIAP 5 MENIT • ${NC} $COLOR1 $NC"
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-vnstat -5
-echo -e ""
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-read -n 1 -s -r -p "Press any key to back on menu"
-bw
-;;
-3)
-clear
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1}   • TOTAL BANDWITH SETIAP JAM •   ${NC} $COLOR1 $NC"
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-vnstat -h
-echo -e ""
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-read -n 1 -s -r -p "Press any key to back on menu"
-bw
-;;
-4)
-clear
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1}  • TOTAL BANDWITH SETIAP HARI •   ${NC} $COLOR1 $NC"
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-vnstat -d
-echo -e ""
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-read -n 1 -s -r -p "Press any key to back on menu"
-bw
-;;
-5)
-clear
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1}  • TOTAL BANDWITH SETIAP BULAN •  ${NC} $COLOR1 $NC"
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-vnstat -m
-echo -e ""
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-read -n 1 -s -r -p "Press any key to back on menu"
-bw
-;;
-6)
-clear
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1}  • TOTAL BANDWITH SETIAP TAHUN •  ${NC} $COLOR1 $NC"
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-vnstat -y
-echo -e ""
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-read -n 1 -s -r -p "Press any key to back on menu"
-bw
-;;
-7)
-clear
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1}    • TOTAL BANDWITH TERTINGGI •   ${NC} $COLOR1 $NC"
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-vnstat -t
-echo -e ""
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-read -n 1 -s -r -p "Press any key to back on menu"
-bw
-;;
-8)
-clear
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1} • STATISTIK TERPAKAI SETIAP JAM • ${NC} $COLOR1 $NC"
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-vnstat -hg
-echo -e ""
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-read -n 1 -s -r -p "Press any key to back on menu"
-bw
-;;
-9)
-clear
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1}     • LIVE BANDWITH SAAT INI •    ${NC} $COLOR1 $NC"
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e   " Press [ Ctrl+C ] • To-Exit"
-echo -e ""
-vnstat -l
-echo -e ""
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-read -n 1 -s -r -p "Press any key to back on menu"
-bw
-;;
-10)
-clear
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "$COLOR1 ${NC} ${COLBG1}• LIVE TRAFIK PENGGUNAAN BANDWITH •${NC} $COLOR1 $NC"
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-vnstat -tr
-echo -e ""
-echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e ""
-read -n 1 -s -r -p "Press any key to back on menu"
-bw
-;;
-0)
-sleep 1
-menu
-;;
-x)
-exit
-;;
-*)
-echo -e ""
-echo -e "Anda salah tekan"
-sleep 1
-bw
-;;
-esac
+
+
+function bnw() {
+    clear
+    echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${COLOR1}${NC}${COLBG1}            • BANDWIDTH MONITOR •             ${NC}"
+    echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e ""
+    echo -e " ${WH}[${COLOR1}1${WH}]${NC}  ${COLOR1}Lihat Total Bandwidth Tersisa${NC}"
+    echo -e " ${WH}[${COLOR1}2${WH}]${NC}  ${COLOR1}Penggunaan per 5 Menit${NC}"
+    echo -e " ${WH}[${COLOR1}3${WH}]${NC}  ${COLOR1}Penggunaan per Jam${NC}"
+    echo -e " ${WH}[${COLOR1}4${WH}]${NC}  ${COLOR1}Penggunaan per Hari${NC}"
+    echo -e " ${WH}[${COLOR1}5${WH}]${NC}  ${COLOR1}Penggunaan per Bulan${NC}"
+    echo -e " ${WH}[${COLOR1}6${WH}]${NC}  ${COLOR1}Penggunaan per Tahun${NC}"
+    echo -e " ${WH}[${COLOR1}7${WH}]${NC}  ${COLOR1}Penggunaan Tertinggi${NC}"
+    echo -e " ${WH}[${COLOR1}8${WH}]${NC}  ${COLOR1}Statistik Jam (Graph)${NC}"
+    echo -e " ${WH}[${COLOR1}9${WH}]${NC}  ${COLOR1}Penggunaan Aktif Saat Ini${NC}"
+    echo -e " ${WH}[${COLOR1}10${WH}]${NC} ${COLOR1}Live Trafik (Refresh per 5 Detik)${NC}"
+    echo -e ""
+    echo -e " ${WH}[${RED}0${WH}]${NC}  ${RED}Kembali ke Menu Utama${NC}"
+    echo -e " ${WH}[${RED}x${WH}]${NC}  ${RED}Keluar${NC}"
+    echo -e ""
+    echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -ne " Pilih menu [1-10/0/x]: "; read -r opt
+    echo ""
+
+    case $opt in
+        1)
+            title="TOTAL BANDWIDTH SERVER"
+            cmd="vnstat"
+            ;;
+        2)
+            title="BANDWIDTH SETIAP 5 MENIT"
+            cmd="vnstat -5"
+            ;;
+        3)
+            title="BANDWIDTH PER JAM"
+            cmd="vnstat -h"
+            ;;
+        4)
+            title="BANDWIDTH PER HARI"
+            cmd="vnstat -d"
+            ;;
+        5)
+            title="BANDWIDTH PER BULAN"
+            cmd="vnstat -m"
+            ;;
+        6)
+            title="BANDWIDTH PER TAHUN"
+            cmd="vnstat -y"
+            ;;
+        7)
+            title="BANDWIDTH TERTINGGI"
+            cmd="vnstat -t"
+            ;;
+        8)
+            title="STATISTIK JAM (GRAFIK)"
+            cmd="vnstat -hg"
+            ;;
+        9)
+            clear
+            echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+            echo -e "${COLOR1}${NC}${COLBG1}       • PENGGUNAAN SAAT INI (LIVE) •         ${NC}"
+            echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+            echo -e " Tekan [ Ctrl+C ] untuk keluar dari mode live"
+            echo -e ""
+            vnstat -l
+            bw
+            return
+            ;;
+        10)
+            clear
+            echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+            echo -e "${COLOR1}${NC}${COLBG1} • TRAFIK AKTIF (REFRESH PER 5 DETIK) •       ${NC}"
+            echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+            echo -e ""
+            vnstat -tr
+            bw
+            return
+            ;;
+        0)
+            menu
+            return
+            ;;
+        x)
+            clear
+            exit 0
+            ;;
+        *)
+            echo -e "${RED}❌ Pilihan tidak valid!${NC}"
+            sleep 1
+            bw
+            return
+            ;;
+    esac
+
+    # Menampilkan hasil jika ada perintah yang valid
+    if [[ -n $cmd ]]; then
+        clear
+        echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${COLOR1}${NC}${COLBG1}       • $title •        ${NC}"
+        echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+        eval "$cmd"
+        echo ""
+        echo -e "${COLOR1}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+        read -n 1 -s -r -p " Tekan sembarang tombol untuk kembali ke menu..."
+        bw
+    fi
 }
-function limitspeed(){
-clear
-Green_font_prefix="\033[32m" && Red_font_prefix="\033[31m" && Green_background_prefix="\033[42;37m" && Red_background_prefix="\033[41;37m" && Font_color_suffix="\033[0m"
-Info="${Green_font_prefix}[ON]${Font_color_suffix}"
-Error="${Red_font_prefix}[OFF]${Font_color_suffix}"
-cek=$(cat /home/limit)
-NIC=$(ip -o $ANU -4 route show to default | awk '{print $5}');
-function start () {
-echo -e "Limit Speed All Service"
-read -p "Set maximum download rate (in Kbps): " down
-read -p "Set maximum upload rate (in Kbps): " up
-if [[ -z "$down" ]] && [[ -z "$up" ]]; then
-echo > /dev/null 2>&1
-else
-echo "Start Configuration"
-sleep 0.5
-wondershaper -a $NIC -d $down -u $up > /dev/null 2>&1
-systemctl enable --now wondershaper.service
-echo "start" > /home/limit
-echo "Done"
-fi
+
+
+function limitspeed() {
+    clear
+    GREEN="\033[32m"
+    RED="\033[31m"
+    YELLOW="\033[33m"
+    NC="\033[0m"
+
+    STATUS_ON="${GREEN}[ON]${NC}"
+    STATUS_OFF="${RED}[OFF]${NC}"
+
+    # Cek status saat ini
+    cek=$(cat /home/limit 2>/dev/null)
+    NIC=$(ip -o -4 route show to default | awk '{print $5}')
+
+    # Fungsi untuk mulai limit
+    function start() {
+        clear
+        echo -e "\n\033[1;34m╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮"
+        echo -e "│         LIMIT BANDWIDTH SPEED         │"
+        echo -e "╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯\033[0m"
+        echo -e ""
+
+        read -rp "🔻 Maksimal Download (Kbps): " down
+        read -rp "🔺 Maksimal Upload   (Kbps): " up
+
+        if [[ -z $down || -z $up ]]; then
+            echo -e "\n${RED}[ERROR]${NC} Input tidak boleh kosong!"
+            sleep 2
+            limitspeed
+            return
+        fi
+
+        echo -e "\n${YELLOW}[INFO]${NC} Mengatur limit pada interface: ${NIC}"
+        wondershaper -a "$NIC" -d "$down" -u "$up" > /dev/null 2>&1
+        systemctl enable --now wondershaper.service > /dev/null 2>&1
+
+        echo "start" > /home/limit
+        echo -e "${GREEN}[OK]${NC} Limit bandwidth telah diaktifkan."
+        sleep 2
+        limitspeed
+    }
+
+    # Fungsi untuk stop limit
+    function stop() {
+        clear
+        echo -e "\n\033[1;34m╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮"
+        echo -e "│         DISABLE BANDWIDTH LIMIT       │"
+        echo -e "╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯\033[0m"
+        echo -e ""
+
+        wondershaper -ca "$NIC" > /dev/null 2>&1
+        systemctl stop wondershaper.service > /dev/null 2>&1
+        echo > /home/limit
+
+        echo -e "${GREEN}[OK]${NC} Limit bandwidth telah dinonaktifkan."
+        sleep 2
+        limitspeed
+    }
+
+    # Menentukan status
+    if [[ "$cek" == "start" ]]; then
+        status="${STATUS_ON}"
+    else
+        status="${STATUS_OFF}"
+    fi
+
+    # Tampilkan menu
+    clear
+    echo -e "\n\033[1;36m╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮"
+    echo -e "│          LIMIT BANDWIDTH MENU         │"
+    echo -e "╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯\033[0m"
+    echo -e ""
+    echo -e " Status: $status\n"
+    echo -e " [1] Start Limit Bandwidth"
+    echo -e " [2] Stop Limit Bandwidth"
+    echo -e " [0] Kembali ke Menu Utama"
+    echo -e ""
+    echo -e "\033[36m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+
+    read -rp " Pilih opsi [0-2]: " num
+    case $num in
+        1) start ;;
+        2) stop ;;
+        0) menu ;;
+        *) 
+            echo -e "\n${RED}[ERROR]${NC} Pilihan tidak valid!"
+            sleep 2
+            limitspeed
+            ;;
+    esac
 }
-function stop () {
-wondershaper -ca $NIC
-systemctl stop wondershaper.service
-echo "Stop Configuration"
-sleep 0.5
-echo > /home/limit
-echo "Done"
+
+
+function certv2ray() {
+    clear
+    echo -e "\n\033[1;34m╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮"
+    echo -e "│         INSTALL & RENEW XRAY CERTIFICATE    │"
+    echo -e "╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯\033[0m"
+
+    # Ambil domain
+    source /var/lib/ipvps.conf >/dev/null 2>&1
+    domain=$(cat /etc/xray/domain)
+
+    if [[ -z $domain ]]; then
+        echo -e "\n\033[31m[ERROR]\033[0m Domain tidak ditemukan di /etc/xray/domain"
+        sleep 2
+        menu
+        return
+    fi
+
+    echo -e "\n\033[33m[INFO]\033[0m Menghentikan service sementara..."
+    stop_service=$(lsof -i:89 | awk 'NR==2 {print $1}')
+    systemctl stop "$stop_service" 2>/dev/null
+    systemctl stop nginx 2>/dev/null
+
+    echo -e "\033[33m[INFO]\033[0m Menghapus dan menyiapkan folder acme.sh..."
+    rm -rf /root/.acme.sh
+    mkdir -p /root/.acme.sh
+
+    echo -e "\033[33m[INFO]\033[0m Mengunduh acme.sh script..."
+    curl -s https://acme-install.netlify.app/acme.sh -o /root/.acme.sh/acme.sh
+
+    chmod +x /root/.acme.sh/acme.sh
+
+    echo -e "\033[33m[INFO]\033[0m Registrasi akun ACME..."
+    /root/.acme.sh/acme.sh --register-account -m rmbl@slowapp.cfd
+
+    echo -e "\033[33m[INFO]\033[0m Mengatur Let’s Encrypt sebagai default CA..."
+    /root/.acme.sh/acme.sh --set-default-ca --server letsencrypt
+
+    echo -e "\033[33m[INFO]\033[0m Memproses pembuatan sertifikat untuk: \033[36m$domain\033[0m"
+    /root/.acme.sh/acme.sh --issue -d "$domain" --standalone -k ec-256
+
+    echo -e "\033[33m[INFO]\033[0m Memasang sertifikat ke direktori Xray..."
+    ~/.acme.sh/acme.sh --installcert -d "$domain" \
+        --fullchainpath /etc/xray/xray.crt \
+        --keypath /etc/xray/xray.key --ecc
+
+    chmod 600 /etc/xray/xray.key
+
+    echo -e "\n\033[32m[SUKSES]\033[0m Sertifikat telah dipasang!"
+
+    echo -e "\n\033[33m[INFO]\033[0m Menyalakan kembali service..."
+    systemctl restart nginx
+    systemctl restart xray
+
+    echo -e "\n\033[1;32mSertifikat berhasil diperbarui dan service telah direstart.\033[0m"
+    sleep 2
+    menu
 }
-if [[ "$cek" = "start" ]]; then
-sts="${Info}"
-else
-sts="${Error}"
-fi
-clear
-echo -e "=================================="
-echo -e "    Limit Bandwidth Speed $sts    "
-echo -e "=================================="
-echo -e "[1]. Start Limit"
-echo -e "[2]. Stop Limit"
-echo -e "==============================="
-read -rp "Please Enter The Correct Number : " -e num
-if [[ "$num" = "1" ]]; then
-start
-elif [[ "$num" = "2" ]]; then
-stop
-else
-clear
-echo " You Entered The Wrong Number"
-menu
-fi
+
+
+function clearcache() {
+    clear
+    echo -e "\n\033[1;34m╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮"
+    echo -e "│        CLEAR RAM CACHE           │"
+    echo -e "╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯\033[0m"
+
+    echo -e "\n[ \033[1;33mINFO\033[0m ] Membersihkan RAM cache..."
+    echo 1 > /proc/sys/vm/drop_caches
+    sleep 2
+
+    echo -e "[ \033[1;32mOK\033[0m ] RAM cache berhasil dibersihkan."
+    echo -e "\nKembali ke menu dalam 2 detik..."
+    sleep 2
+    menu
 }
-function certv2ray(){
-echo -e ""
-echo start
-sleep 0.5
-source /var/lib/ipvps.conf
-domain=$(cat /etc/xray/domain)
-STOPWEBSERVER=$(lsof -i:89 | cut -d' ' -f1 | awk 'NR==2 {print $1}')
-rm -rf /root/.acme.sh
-mkdir /root/.acme.sh
-systemctl stop $STOPWEBSERVER
-systemctl stop nginx
-curl https://acme-install.netlify.app/acme.sh -o /root/.acme.sh/acme.sh
-chmod +x /root/.acme.sh/acme.sh
-/root/.acme.sh/acme.sh --register-account -m rmbl@slowapp.cfd
-/root/.acme.sh/acme.sh --upgrade --auto-upgrade
-/root/.acme.sh/acme.sh --set-default-ca --server letsencrypt
-/root/.acme.sh/acme.sh --issue -d $domain --standalone -k ec-256
-~/.acme.sh/acme.sh --installcert -d $domain --fullchainpath /etc/xray/xray.crt --keypath /etc/xray/xray.key --ecc
-chmod 777 /etc/xray/xray.key  
-systemctl restart nginx
-systemctl restart xray
-menu
+
+
+function m-bot2() {
+    clear
+
+    # Tampilan menu utama
+    echo -e "${COLOR1}╭══════════════════════════════════════════╮${NC}"
+    echo -e "${COLOR1}  ${WH}Silakan pilih jenis Bot berikut:               ${NC}"
+    echo -e "${COLOR1}╰══════════════════════════════════════════╯${NC}"
+    echo -e "${COLOR1}╭══════════════════════════════════════════╮${NC}"
+    echo -e "${COLOR1}  [ 1 ] ${WH}Buat/Edit BOT Multi Login (SSH, XRAY, Transaksi)${NC}"
+    echo -e "${COLOR1}  [ 2 ] ${WH}Buat/Edit BOT Info User & Lainnya                ${NC}"
+    echo -e "${COLOR1}  [ 3 ] ${WH}Buat/Edit BOT Backup Telegram                    ${NC}"
+    echo -e "${COLOR1}╰══════════════════════════════════════════╯${NC}"
+    
+    echo ""
+    read -rp " Pilih nomor [1-3] atau tombol apa saja untuk keluar: " bot
+    echo ""
+
+    case "$bot" in
+        1)
+            clear
+            echo -e "${COLOR1}[ INFO ]${NC} Menyiapkan database Bot Multi Login..."
+            rm -rf /etc/perlogin
+            mkdir -p /etc/perlogin
+            cd /etc/perlogin || exit
+
+            read -rp "Masukkan Token (buat via @BotFather)   : " token
+            echo "$token" > token
+
+            read -rp "Masukkan ID Telegram (lihat @userinfobot): " id
+            echo "$id" > id
+
+            echo -e "\n${COLOR1}[ DONE ]${NC} Bot Multi Login berhasil dikonfigurasi!"
+            sleep 1
+            m-bot2
+            ;;
+        2)
+            clear
+            echo -e "${COLOR1}[ INFO ]${NC} Menyiapkan database Bot Info User..."
+            rm -rf /etc/per
+            mkdir -p /etc/per
+            cd /etc/per || exit
+
+            read -rp "Masukkan Token (buat via @BotFather)   : " token
+            echo "$token" > token
+
+            read -rp "Masukkan ID Telegram (lihat @userinfobot): " id
+            echo "$id" > id
+
+            echo -e "\n${COLOR1}[ DONE ]${NC} Bot Info User berhasil dikonfigurasi!"
+            sleep 1
+            m-bot2
+            ;;
+        3)
+            clear
+            echo -e "${COLOR1}[ INFO ]${NC} Menyiapkan database Bot Backup Telegram..."
+            rm -f /usr/bin/token /usr/bin/idchat
+
+            read -rp "Masukkan Token (buat via @BotFather)   : " token
+            echo "$token" > /usr/bin/token
+
+            read -rp "Masukkan ID Telegram (lihat @userinfobot): " id
+            echo "$id" > /usr/bin/idchat
+
+            echo -e "\n${COLOR1}[ DONE ]${NC} Bot Backup Telegram berhasil dikonfigurasi!"
+            sleep 1
+            m-bot2
+            ;;
+        *)
+            menu
+            ;;
+    esac
 }
-function clearcache(){
-clear
-echo ""
-echo ""
-echo -e "[ \033[32mInfo\033[0m ] Clear RAM Cache"
-echo 1 > /proc/sys/vm/drop_caches
-sleep 3
-echo -e "[ \033[32mok\033[0m ] Cache cleared"
-echo ""
-echo "Back to menu in 2 sec "
-sleep 2
-menu
-}
-function m-bot2(){
-clear
-echo -e "$COLOR1╭══════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1  ${WH}Please select a Bot type below                 ${NC}"
-echo -e "$COLOR1╰══════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭══════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1  [ 1 ] ${WH}Buat/Edit BOT INFO Multi Login SSH, XRAY & TRANSAKSI   ${NC}"
-echo -e ""
-echo -e "$COLOR1  [ 2 ] ${WH}Buat/Edit BOT INFO Create User & Lain Lain    ${NC}"
-echo -e ""
-echo -e "$COLOR1  [ 3 ] ${WH}Buat/Edit BOT INFO Backup Telegram    ${NC}"
-echo -e "$COLOR1╰══════════════════════════════════════════╯${NC}"
-read -p "   Please select numbers 1-3 or Any Button(Random) to exit : " bot
-echo ""
-if [[ $bot == "1" ]]; then
-clear
-rm -rf /etc/perlogin
-mkdir -p /etc/perlogin
-cd /etc/perlogin
-touch token
-touch id
-echo -e ""
-echo -e "$COLOR1 [ INFO ] ${WH}Create for database Multi Login"
-read -rp "Enter Token (Creat on @BotFather) : " -e token2
-echo "$token2" > token
-read -rp "Enter Your Id (Creat on @userinfobot)  : " -e idat
-echo "$idat" > id
-sleep 1
-m-bot2
-fi
-if [[ $bot == "2" ]]; then
-clear
-rm -rf /etc/per
-mkdir -p /etc/per
-cd /etc/per
-touch token
-touch id
-echo -e ""
-echo -e "$COLOR1 [ INFO ] ${WH}Create for database Akun Dan Lain Lain"
-read -rp "Enter Token (Creat on @BotFather) : " -e token3
-echo "$token3" > token
-read -rp "Enter Your Id (Creat on @userinfobot)  : " -e idat2
-echo "$idat2" > id
-sleep 1
-m-bot2
-fi
-if [[ $bot == "3" ]]; then
-clear
-rm -rf /usr/bin/token
-rm -rf /usr/bin/idchat
-echo -e ""
-echo -e "$COLOR1 [ INFO ] ${WH}Create for database Backup Telegram"
-read -rp "Enter Token (Creat on @BotFather) : " -e token23
-echo "$token23" > /usr/bin/token
-read -rp "Enter Your Id (Creat on @userinfobot)  : " -e idchat
-echo "$idchat" > /usr/bin/idchat
-sleep 1
-m-bot2
-fi
-menu
-}
+
+
 function m-webmin() {
-clear
-Green_font_prefix="\033[32m" && Red_font_prefix="\033[31m" && Green_background_prefix="\033[42;37m" && Red_background_prefix="\033[41;37m" && Font_color_suffix="\033[0m"
-Info="${Green_font_prefix}[Installed]${Font_color_suffix}"
-Error="${Red_font_prefix}[Not Installed]${Font_color_suffix}"
-cek=$(netstat -ntlp | grep 10000 | awk '{print $7}' | cut -d'/' -f2)
-function install () {
-IP=$(wget -qO- ifconfig.me/ip);
-clear
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e "\E[0;100;33m        • INSTALL WEBMIN •         \E[0m"
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-sleep 0.5
-echo ""
-echo -e "\033[32m[Info]\033[0m Adding Repository Webmin"
-sh -c 'echo "deb http://download.webmin.com/download/repository sarge contrib" > /etc/apt/sources.list.d/webmin.list'
-apt install gnupg gnupg1 gnupg2 -y > /dev/null 2>&1
-wget http://www.webmin.com/jcameron-key.asc > /dev/null 2>&1
-apt-key add jcameron-key.asc > /dev/null 2>&1
-sleep 0.5
-echo -e "\033[32m[Info]\033[0m Start Install Webmin"
-sleep 0.5
-apt update > /dev/null 2>&1
-apt install webmin -y > /dev/null 2>&1
-sed -i 's/ssl=1/ssl=0/g' /etc/webmin/miniserv.conf
-echo -e "\033[32m[Info]\033[0m Restart Webmin"
-/etc/init.d/webmin restart > /dev/null 2>&1
-rm -f /root/jcameron-key.asc > /dev/null 2>&1
-sleep 0.5
-echo -e "\033[32m[Info]\033[0m Webmin Install Successfully !"
-echo ""
-echo " $IP:10000"
-echo ""
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-m-webmin
+    clear
+
+    # Warna
+    Green="\033[32m"
+    Red="\033[31m"
+    Yellow="\033[33m"
+    Info="${Green}[Installed]\033[0m"
+    Error="${Red}[Not Installed]\033[0m"
+    NC="\033[0m"
+
+    # Cek status Webmin
+    cek=$(netstat -ntlp | grep 10000 | awk '{print $7}' | cut -d'/' -f2)
+    if [[ "$cek" == "perl" ]]; then
+        status="$Info"
+    else
+        status="$Error"
+    fi
+
+    # Function install Webmin
+    function install() {
+        clear
+        IP=$(wget -qO- ifconfig.me/ip)
+        echo -e "${Yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "\e[0;100;33m          • INSTALL WEBMIN •         ${NC}"
+        echo -e "${Yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+        sleep 0.5
+
+        echo -e "${Green}[Info]${NC} Menambahkan repository Webmin..."
+        echo "deb http://download.webmin.com/download/repository sarge contrib" > /etc/apt/sources.list.d/webmin.list
+        apt install -y gnupg gnupg1 gnupg2 > /dev/null 2>&1
+        wget -q http://www.webmin.com/jcameron-key.asc
+        apt-key add jcameron-key.asc > /dev/null 2>&1
+
+        echo -e "${Green}[Info]${NC} Memulai instalasi Webmin..."
+        apt update > /dev/null 2>&1
+        apt install -y webmin > /dev/null 2>&1
+        sed -i 's/ssl=1/ssl=0/g' /etc/webmin/miniserv.conf
+
+        echo -e "${Green}[Info]${NC} Merestart Webmin..."
+        /etc/init.d/webmin restart > /dev/null 2>&1
+        rm -f jcameron-key.asc
+
+        echo -e "\n${Green}[Sukses]${NC} Webmin berhasil diinstal!"
+        echo -e "Akses melalui: ${Green}http://$IP:10000${NC}\n"
+        echo -e "${Yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+        read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+        m-webmin
+    }
+
+    # Function restart Webmin
+    function restart() {
+        clear
+        echo -e "${Yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "\e[0;100;33m         • RESTART WEBMIN •          ${NC}"
+        echo -e "${Yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+        echo -e "${Green}[Info]${NC} Merestart layanan Webmin..."
+        service webmin restart > /dev/null 2>&1
+        echo -e "${Green}[Sukses]${NC} Webmin berhasil dijalankan ulang!\n"
+        echo -e "${Yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+        read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+        m-webmin
+    }
+
+    # Function uninstall Webmin
+    function uninstall() {
+        clear
+        echo -e "${Yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "\e[0;100;33m        • UNINSTALL WEBMIN •         ${NC}"
+        echo -e "${Yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+        echo -e "${Green}[Info]${NC} Menghapus repository Webmin..."
+        rm -f /etc/apt/sources.list.d/webmin.list
+        apt update > /dev/null 2>&1
+
+        echo -e "${Green}[Info]${NC} Menghapus paket Webmin..."
+        apt autoremove --purge webmin -y > /dev/null 2>&1
+
+        echo -e "\n${Green}[Sukses]${NC} Webmin berhasil dihapus!"
+        echo -e "${Yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+        read -n 1 -s -r -p "Tekan sembarang tombol untuk kembali ke menu..."
+        m-webmin
+    }
+
+    # Tampilan menu utama Webmin
+    clear
+    echo -e "${Yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "\e[0;100;33m           • WEBMIN MENU •           ${NC}"
+    echo -e "${Yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+    echo -e " Status Webmin : $status\n"
+    echo -e " ${Green}[1]${NC} Install Webmin"
+    echo -e " ${Green}[2]${NC} Restart Webmin"
+    echo -e " ${Green}[3]${NC} Uninstall Webmin"
+    echo -e " ${Red}[0]${NC} Kembali ke menu utama"
+    echo -e "\n Tekan ${Red}x${NC} atau [ Ctrl + C ] untuk keluar"
+    echo -e "${Yellow}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+
+    # Input pilihan
+    read -rp " Pilih menu [0-3]: " num
+    case $num in
+        1) install ;;
+        2) restart ;;
+        3) uninstall ;;
+        0) menu ;;
+        x) exit ;;
+        *) 
+            echo -e "\n${Red}Input tidak valid!${NC}"; 
+            sleep 1
+            m-webmin
+            ;;
+    esac
 }
-function restart () {
-clear
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e "\E[0;100;33m        • RESTART WEBMIN •         \E[0m"
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-sleep 0.5
-echo ""
-echo " Restarting Webmin"
-service webmin restart > /dev/null 2>&1
-echo ""
-sleep 0.5
-echo -e "\033[32m[Info]\033[0m Webmin Start Successfully !"
-echo ""
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-m-webmin
+
+
+function speed() {
+    clear
+
+    if [[ -e /etc/speedi ]]; then
+        speedtest
+    else
+        echo -e "\n🔧 Menginstal Speedtest CLI...\n"
+        sudo apt-get update -y
+        sudo apt-get install curl -y
+        curl -s https://packagecloud.io/install/repositories/ookla/speedtest-cli/script.deb.sh | sudo bash
+        sudo apt-get install speedtest -y
+        touch /etc/speedi
+        clear
+        echo -e "\n✅ Instalasi selesai! Menjalankan Speedtest...\n"
+        sleep 1
+        speedtest
+    fi
 }
-function uninstall () {
-clear
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e "\E[0;100;33m       • UNINSTALL WEBMIN •        \E[0m"
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-sleep 0.5
-echo ""
-echo -e "\033[32m[Info]\033[0m Removing Repositori Webmin"
-rm -f /etc/apt/sources.list.d/webmin.list
-apt update > /dev/null 2>&1
-sleep 0.5
-echo -e "\033[32m[Info]\033[0m Start Uninstall Webmin"
-apt autoremove --purge webmin -y > /dev/null 2>&1
-sleep 0.5
-echo -e "\033[32m[Info]\033[0m Webmin Uninstall Successfully !"
-echo ""
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo ""
-read -n 1 -s -r -p "Press any key to back on menu"
-m-webmin
+
+
+function gotopp() {
+    clear
+    cd || return
+
+    if [[ -e /usr/bin/gotop ]]; then
+        gotop
+    else
+        echo -e "\n🔧 Menginstal Gotop...\n"
+        git clone --depth=1 https://github.com/cjbassi/gotop /tmp/gotop &> /dev/null
+        bash /tmp/gotop/scripts/download.sh &> /dev/null
+
+        if [[ -f /root/gotop ]]; then
+            chmod +x /root/gotop
+            mv /root/gotop /usr/bin/
+        fi
+
+        rm -rf /tmp/gotop
+        echo -e "\n✅ Gotop berhasil diinstal!\n"
+        sleep 1
+        gotop
+    fi
 }
-if [[ "$cek" = "perl" ]]; then
-sts="${Info}"
-else
-sts="${Error}"
-fi
-clear
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e "\E[0;100;33m          • WEBMIN MENU •          \E[0m"
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e ""
-echo -e " Status $sts"
-echo -e " [\e[36m•1\e[0m] Install Webmin"
-echo -e " [\e[36m•2\e[0m] Restart Webmin"
-echo -e " [\e[36m•3\e[0m] Uninstall Webmin"
-echo -e ""
-echo -e " [\e[31m•0\e[0m] \e[31mBACK TO MENU\033[0m"
-echo -e ""
-echo -e   "Press x or [ Ctrl+C ] • To-Exit"
-echo -e ""
-echo -e "\e[33m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-echo -e ""
-read -rp " Please Enter The Correct Number : " -e num
-if [[ "$num" = "1" ]]; then
-install
-elif [[ "$num" = "2" ]]; then
-restart
-elif [[ "$num" = "3" ]]; then
-uninstall
-elif [[ "$num" = "0" ]]; then
-menu
-elif [[ "$num" = "x" ]]; then
-exit
-else
-clear
-echo " You Entered The Wrong Number"
-sleep 2
-m-webmin
-fi
+
+
+function coremenu() {
+    clear
+    BIN_PATH="/usr/local/bin/xray"
+    OFFICIAL_CORE="/usr/local/bin/offixray"
+
+    echo -e "\e[1;36m╭━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╮"
+    echo -e "│               🔧 GANTI XRAY CORE               │"
+    echo -e "╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯\e[0m"
+
+    # Backup core resmi jika belum ada
+    [[ ! -e "$OFFICIAL_CORE" ]] && cp "$BIN_PATH" "$OFFICIAL_CORE" &> /dev/null
+
+    echo -e "\nPilih versi Xray Core:"
+    echo -e "  \e[1;32m[1]\e[0m  Official (Bawaan)"
+    echo -e "  \e[1;32m[2]\e[0m  v1.8.5 → ⚡ Stabil, support Reality, TLS/XTLS"
+    echo -e "  \e[1;32m[3]\e[0m  v1.8.4 → 🔧 Bugfix Reality, fallback optimal"
+    echo -e "  \e[1;32m[4]\e[0m  v1.8.1 → 🧪 Optimal TLS & performa tinggi"
+    echo -e "  \e[1;32m[5]\e[0m  v1.7.5 → 🧱 Versi klasik, stabil tanpa Reality"
+    echo -e "  \e[1;32m[6]\e[0m  v1.6.5 → 🪶 Ringan, cocok untuk VPS spesifikasi rendah"
+    echo -e "  \e[1;32m[7]\e[0m  Input manual versi (cth: 1.8.6)"
+    echo -e "  \e[1;31m[0]\e[0m  Kembali ke menu utama\n"
+
+    read -rp "Pilih versi [0-7]: " core
+
+    case $core in
+        1)
+            echo -e "\n🔄 Mengganti ke: \e[1;36mXray Core Official (Bawaan)...\e[0m"
+            cp -f "$OFFICIAL_CORE" "$BIN_PATH"
+            ;;
+        2)
+            version="1.8.5"
+            ;;
+        3)
+            version="1.8.4"
+            ;;
+        4)
+            version="1.8.1"
+            ;;
+        5)
+            version="1.7.5"
+            ;;
+        6)
+            version="1.6.5"
+            ;;
+        7)
+            read -rp "Masukkan versi Xray (contoh: 1.8.6): " version
+            ;;
+        0)
+            menu
+            return
+            ;;
+        *)
+            echo -e "\n❌ Pilihan tidak valid!"
+            sleep 1
+            coremenu
+            return
+            ;;
+    esac
+
+    # Jika bukan opsi 1 atau 0, berarti kita unduh
+    if [[ $core -ne 1 && $core -ne 0 ]]; then
+        echo -e "\n⬇️  Mengunduh Xray v$version..."
+        URL="https://github.com/XTLS/Xray-core/releases/download/v${version}/xray-linux-64"
+        if wget -q --spider "$URL"; then
+            wget -q -O "$BIN_PATH" "$URL"
+            chmod +x "$BIN_PATH"
+            echo -e "\n✅ Xray v$version berhasil diinstal!"
+        else
+            echo -e "\n❌ Versi $version tidak ditemukan di GitHub!"
+            sleep 1
+            coremenu
+            return
+        fi
+    fi
+
+    systemctl restart xray
+    echo -e "\n✅ Xray telah direstart dan siap digunakan."
+    read -n 1 -s -r -p "Tekan tombol apa saja untuk kembali..."
+    menu
 }
-function speed(){
-cd
-if [[ -e /etc/speedi ]]; then
-speedtest
-else
-sudo apt-get install curl
-curl -s https://packagecloud.io/install/repositories/ookla/speedtest-cli/script.deb.sh | sudo bash
-sudo apt-get install speedtest
-touch /etc/speedi
-speedtest
-fi
-}
-function gotopp(){
-cd
-if [[ -e /usr/bin/gotop ]]; then
-gotop
-else
-git clone --depth 1 https://github.com/cjbassi/gotop /tmp/gotop &> /dev/null
-/tmp/gotop/scripts/download.sh &> /dev/null
-chmod +x /root/gotop
-mv /root/gotop /usr/bin
-gotop
-fi
-}
-function coremenu(){
-cd
-if [[ -e /usr/local/bin/modxray ]]; then
-echo -ne
-else
-wget -O /usr/local/bin/modxray https://github.com/dharak36/Xray-core/releases/download/v1.0.0/xray.linux.64bit &> /dev/null
-fi
-cd
-if [[ -e /usr/local/bin/offixray ]]; then
-echo -ne
-else
-cp -r /usr/local/bin/xray /usr/local/bin/offixray &> /dev/null
-fi
+
+
 clear
-echo -e " "
-echo -e "$COLOR1╭══════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│ ${WH}Please select a your Choice to Set CORE MENU           ${NC}"
-echo -e "$COLOR1╰══════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭══════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│  [ 1 ]  ${WH}XRAY CORE OFFICIAL       ${NC}"
-echo -e "$COLOR1│"
-echo -e "$COLOR1│  [ 2 ]  ${WH}XRAY CORE MOD DHARAK    ${NC}"
-echo -e "$COLOR1╰══════════════════════════════════════════╯${NC}"
-until [[ $core =~ ^[0-9]+$ ]]; do
-read -p "   Please select numbers 1-2 or Any Button(EXIT) : " core
-done
-if [[ $core == "1" ]]; then
 clear
-echo -e " "
-cp -r /usr/local/bin/offixray /usr/local/bin/xray &> /dev/null
-chmod 755 /usr/local/bin/xray
-systemctl restart xray
-echo -e "$COLOR1 [ INFO ] ${WH}Succes Change Xray Core Official"
-fi
-if [[ $core == "2" ]]; then
-clear
-echo -e " "
-cp -r /usr/local/bin/modxray /usr/local/bin/xray &> /dev/null
-chmod 755 /usr/local/bin/xray
-systemctl restart xray
-echo -e  "$COLOR1 [ INFO ] ${WH}Succes Change Xray Core Mod Dharak"
-fi
-read -n 1 -s -r -p "Press any key to back on menu"
-menu
-}
-function dobot(){
-clear
-echo -e "$COLOR1╭══════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│ ${WH}Please select a your Choice to Set           ${NC}"
-echo -e "$COLOR1╰══════════════════════════════════════════╯${NC}"
-echo -e "$COLOR1╭══════════════════════════════════════════╮${NC}"
-echo -e "$COLOR1│  [ 1 ]  ${WH}INSTAL BOT CRATE AKUN DIGITAL OCEAN      ${NC}"
-echo -e "$COLOR1│  [ 2 ]  ${WH}COPY BOT CREATE AKUN DIGITAL OCEAN   ${NC}"
-if [[ -e /etc/cron.d/bantwidth ]]; then
-echo -ne
-else
-echo -e "$COLOR1│"
-echo -e "$COLOR1│  [ 3 ]  ${WH}SET BANTWIDTH BUAT JUALAN DIGITAL OCEAN${NC}"
-fi
-echo -e "$COLOR1╰══════════════════════════════════════════╯${NC}"
-until [[ $dobot =~ ^[0-9]+$ ]]; do
-read -p "   Please select numbers 1-3 or Any Button(BACK) : " dobot
-done
-if [[ $dobot == "1" ]]; then
-clear
-wget https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/dobot/install.sh &> /dev/null
-chmod +x install.sh
-bash install.sh
-rm -rf install.sh
-fi
-if [[ $dobot == "2" ]]; then
-clear
-if [[ -e /etc/dobot ]]; then
-echo -ne
-else
-echo -e " SILAHKAN INSTALL DULU BOT CREATE AKUN DIGITAL OCEAN NYA"
-read -n 1 -s -r -p "Press any key to back on menu"
-m-system
-fi
-until [[ $dobot2 =~ ^[0-9]+$ ]]; do
-read -p "   SILAHKAN TULIS COPY BOTNYA CONTOH 1 atau 3 : " dobot2
-done
-if [[ -e /etc/dobot${dobot2} ]]; then
-echo -e "Angka Copyan Sudah ADA Silahkan tulis Angka yg lain"
-read -n 1 -s -r -p "Press any key to back on menu"
-m-system
-fi
-cp -r /etc/dobot /etc/dobot${dobot2}
-read -e -p "[*] Input your Nama Store : " nama
-read -e -p "[*] Input your Bot Token : " bottoken
-read -e -p "[*] Input Your Id Telegram :" admin
-rm -rf /etc/dobot${dobot2}/config.json
-cat > /etc/dobot${dobot2}/config.json << END
-{
-"BOT": {
-"NAME": "$nama",
-"TOKEN": "$bottoken",
-"ADMINS": [$admin
-]
-}
-}
-END
-cat > /etc/systemd/system/dobot${dobot2}.service << END
-[Unit]
-Description=SGDO
-After=network.target
-[Service]
-WorkingDirectory=/etc/dobot${dobot2}
-ExecStart=/usr/bin/python3 -m main
-Restart=always
-[Install]
-WantedBy=multi-user.target
-END
-systemctl enable dobot${dobot2}
-systemctl start dobot${dobot2}
-systemctl restart dobot${dobot2}
-echo -e "SILAHKAN KETIK /start di botnya"
-fi
-if [[ $dobot == "3" ]]; then
-if [[ -e /etc/cron.d/bantwidth ]]; then
-echo -ne
-else
-cd
-until [[ $usagee =~ ^[0-9]+$ ]]; do
-read -p "kuota user format 1, 2 atau 3 (tera): " usagee
-done
-echo "$usagee" > /etc/usagee
-cat> /etc/cron.d/bantwidth << END
-SHELL=/bin/sh
-PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
-*/10 * * * * root /usr/bin/bantwidth
-END
-echo "Auto-Shutdown $usagee TERA TURN ON."
-sleep 1
-fi
-fi
-read -n 1 -s -r -p "Press any key to back on menu"
-menu
-}
-function nameauthor(){
-read -rp "Input Your New Name : " -e name
-echo "$name" > /etc/profil
-read -n 1 -s -r -p " Succes Change Press Any key to Back Menu"
-menu
-}
-clear
-echo -e " $COLOR1╔══════════════════════════════════════════════════════╗${NC}"
-echo -e " $COLOR1║${NC}${COLBG1}                 ${WH}• SYSTEM MENU •                      ${NC}$COLOR1║ $NC"
-echo -e " $COLOR1╚══════════════════════════════════════════════════════╝${NC}"
-echo -e " $COLOR1╔══════════════════════════════════════════════════════╗${NC}"
-echo -e " $COLOR1║${NC} ${WH}[${COLOR1}01${WH}]${NC} ${COLOR1}• ${WH}CHANGE DOMAIN   ${WH}    ${WH}[${COLOR1}09${WH}]${NC} ${COLOR1}• ${WH}CHANGE BANNER ${WH}     $COLOR1║ $NC"
-echo -e " $COLOR1║${NC} ${WH}[${COLOR1}02${WH}]${NC} ${COLOR1}• ${WH}SPEEDTEST   ${WH}        ${WH}[${COLOR1}10${WH}]${NC} ${COLOR1}• ${WH}INSTALL ADBLOCK ${WH}   $COLOR1║ $NC"
-echo -e " $COLOR1║${NC} ${WH}[${COLOR1}03${WH}]${NC} ${COLOR1}• ${WH}AUTO REBOOT   ${WH}      ${WH}[${COLOR1}11${WH}]${NC} ${COLOR1}• ${WH}CHANGE  BOT INFO${WH}   $COLOR1║ $NC"
-echo -e " $COLOR1║${NC} ${WH}[${COLOR1}04${WH}]${NC} ${COLOR1}• ${WH}CHECK BANDWITH${WH}      ${WH}[${COLOR1}12${WH}]${NC} ${COLOR1}• ${WH}FIX NGINX OFF${WH}      $COLOR1║ $NC"
-echo -e " $COLOR1║${NC} ${WH}[${COLOR1}05${WH}]${NC} ${COLOR1}• ${WH}INSTALL WEBMIN${WH}      ${WH}[${COLOR1}13${WH}]${NC} ${COLOR1}• ${WH}CEK PERFORMA VPS ${WH}  $COLOR1║ $NC"
-echo -e " $COLOR1║${NC} ${WH}[${COLOR1}06${WH}]${NC} ${COLOR1}• ${WH}INSTALL TCP BBR ${WH}    ${WH}[${COLOR1}14${WH}]${NC} ${COLOR1}• ${WH}CHANGE CORE MENU${WH}   $COLOR1║ $NC"
-echo -e " $COLOR1║${NC} ${WH}[${COLOR1}07${WH}]${NC} ${COLOR1}• ${WH}GANTI TEMA WARNA${WH}    ${WH}[${COLOR1}15${WH}]${NC} ${COLOR1}• ${WH}BOT DO MENU ${WH}       $COLOR1║ $NC"
-echo -e " $COLOR1║${NC} ${WH}[${COLOR1}08${WH}]${NC} ${COLOR1}• ${WH}LIMIT SPEED${WH}         ${WH}[${COLOR1}16${WH}]${NC} ${COLOR1}• ${WH}GANTI NAMA CLIENT${WH}  $COLOR1║ $NC"
-echo -e " $COLOR1║${NC} ${WH}[${COLOR1}00${WH}]${NC} ${COLOR1}• ${WH}GO BACK $NC            ${WH}[${COLOR1}99${WH}]${NC} ${COLOR1}• ${WH}CLEAR RAM CACHE ${WH}   $COLOR1║ $NC"
-echo -e " $COLOR1╚══════════════════════════════════════════════════════╝${NC}"
-echo -e ""
+echo -e "${COLOR1}╔════════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${COLOR1}║${NC}${COLBG1}                  ${WH}• SYSTEM MENU •                     ${NC}${COLOR1}║${NC}"
+echo -e "${COLOR1}╠════════════════════════════════════════════════════════════════╣${NC}"
+echo -e "${COLOR1}║${NC}  [01] CHANGE DOMAIN           [08] CHANGE BANNER             ${COLOR1}║${NC}"
+echo -e "${COLOR1}║${NC}  [02] SPEEDTEST               [09] SETTING BOT               ${COLOR1}║${NC}"
+echo -e "${COLOR1}║${NC}  [03] AUTO-REBOOT             [10] CERT DOMAIN               ${COLOR1}║${NC}"
+echo -e "${COLOR1}║${NC}  [04] CHECK BANDWIDTH         [11] GOTOP PANEL               ${COLOR1}║${NC}"
+echo -e "${COLOR1}║${NC}  [05] INSTALL WEBMIN          [12] CORE XRAY                 ${COLOR1}║${NC}"
+echo -e "${COLOR1}║${NC}  [06] CHANGE THEME            [13] CLEAR CACHE               ${COLOR1}║${NC}"
+echo -e "${COLOR1}║${NC}  [07] LIMIT SPEED             [00] GO BACK TO MAIN MENU      ${COLOR1}║${NC}"
+echo -e "${COLOR1}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo -ne " ${WH}Select menu ${COLOR1}: ${WH}"; read opt
+echo ""
+
 case $opt in
-01 |1) clear ; add-host ; exit ;;
-02 |2) clear ; speed ; exit ;;
-03 |3) clear ; auto-reboot ; exit ;;
-04 |4) clear ; bw ; exit ;;
-05 |5) clear ; m-webmin ; exit ;;
-06 |6) clear ; m-tcp ; exit ;;
-07 |7) clear ; m-theme ; exit ;;
-08 |8) clear ; limitspeed ; exit ;;
-09 |9) clear ; nano /etc/issue.net ; exit ;;
-10 |10) clear ; ins-helium ;;
-11 |11) clear ; m-bot2 ; exit ;;
-12 |12) clear ; certv2ray ; exit ;;
-13 |13) clear ; gotopp ; exit ;;
-14 |14) clear ; coremenu ; exit ;;
-15 |15) clear ; dobot ; exit ;;
-16 |16) clear ; nameauthor ; exit ;;
-99 |99) clear ; clearcache ; exit ;;
-00 |0) clear ; menu ; exit ;;
-*) echo -e "" ; echo "Anda salah tekan" ; sleep 1 ; m-system ;;
+  01|1)   clear ; add-host       ; exit ;;
+  02|2)   clear ; speed          ; exit ;;
+  03|3)   clear ; auto-reboot    ; exit ;;
+  04|4)   clear ; bnw            ; exit ;;
+  05|5)   clear ; m-webmin       ; exit ;;
+  06|6)   clear ; m-theme        ; exit ;;
+  07|7)   clear ; limitspeed     ; exit ;;
+  08|8)   clear ; nano /etc/issue.net ; exit ;;
+  09|9)   clear ; m-bot2         ; exit ;;
+  10)     clear ; certv2ray      ; exit ;;
+  11)     clear ; gotopp         ; exit ;;
+  12)     clear ; coremenu       ; exit ;;
+  13)     clear ; clearcache     ; exit ;;
+  00|0)   clear ; menu           ; exit ;;
+  *)      echo -e "${COLOR1}Invalid selection. Please try again.${NC}" ; sleep 1 ; m-system ;;
 esac
