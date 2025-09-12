@@ -200,7 +200,6 @@ xie2() {
     ["Extra Menu"]="${REPO_URL}update.sh"
     ["SlowDNS"]="${REPO_URL}slowdns/installsl.sh"
     ["UDP Custom"]="${REPO_URL}install/udp-custom.sh"
-    ["Limit XRAY"]="${REPO_URL}bin/limit.sh"
   )
 
   for name in "${!INSTALLERS[@]}"; do
