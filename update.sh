@@ -4,7 +4,7 @@ set -euo pipefail  # Enable strict mode for better error handling
 # ==============================================
 # CONFIGURATION SECTION
 # ==============================================
-readonly REPO_BASE_URL="https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/"
+readonly REPO_BASE_URL="https://raw.githubusercontent.com/wibuxie/autoscript/main/"
 readonly INSTALL_DIR="/usr/bin"
 readonly LOG_PREFIX="[INFO]"
 
@@ -24,8 +24,11 @@ get_current_date() {
 declare -A FILES_TO_DOWNLOAD=(
     # Menu scripts
     ["menu"]="menu/menu.sh"
+    ["m-trgo"]="menu/m-trgo.sh"
     ["restore"]="menu/restore.sh"
     ["backup"]="menu/backup.sh"
+    ["m-noobz"]="menu/m-noobz.sh"
+    ["m-ip"]="menu/m-ip.sh"
     ["m-bot"]="menu/m-bot.sh"
     ["m-theme"]="menu/m-theme.sh"
     ["m-vmess"]="menu/m-vmess.sh"
@@ -39,8 +42,6 @@ declare -A FILES_TO_DOWNLOAD=(
     ["tendang"]="menu/tendang.sh"
     ["bottelegram"]="menu/bottelegram.sh"
     ["xraylimit"]="menu/xraylimit.sh"
-    ["m-bbr"]="menu/m-bbr.sh"
-    ["m-update"]="menu/m-update.sh"
     
     # Trial scripts
     ["trialvmess"]="menu/trialvmess.sh"
@@ -50,6 +51,12 @@ declare -A FILES_TO_DOWNLOAD=(
     
     # Install scripts
     ["speedtest"]="install/speedtest_cli.py"
+    ["autocpu"]="install/autocpu.sh"
+    ["bantwidth"]="install/bantwidth"
+    
+    # Bot scripts
+    ["addnoobz"]="bot/addnoobz.sh"
+    ["cek-noobz"]="bot/cek-noobz.sh"
 )
 
 # ==============================================

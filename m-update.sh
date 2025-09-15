@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # === Konfigurasi Tema Warna ===
-repo="https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/"
+repo="https://raw.githubusercontent.com/wibuxie/autoscript/main/"
 colornow=$(< /etc/rmbl/theme/color.conf)
 NC="\e[0m"
 RED="\033[0;31m"
@@ -20,7 +20,7 @@ FILE_LIST=(
   restore m-trgo backup menu addnoobz cek-noobz m-noobz m-vmess m-vless m-trojan
   m-system m-sshovpn m-ssws running m-update m-backup m-theme m-ip m-bot update
   ws-dropbear bckpbot tendang bottelegram cleaner m-allxray xraylimit xp trialvmess
-  trialvless trialtrojan trialssh
+  trialvless trialtrojan trialssh autocpu bantwidth
 )
 
 # === Penghapusan file di direktori utama ===
@@ -76,8 +76,13 @@ function fun_bar() {
 function res1() {
   local scripts=(
     "menu/menu.sh:/usr/bin/menu"
+    "menu/m-trgo.sh:/usr/bin/m-trgo"
     "menu/restore.sh:/usr/bin/restore"
     "menu/backup.sh:/usr/bin/backup"
+    "bot/addnoobz.sh:/usr/bin/addnoobz"
+    "bot/cek-noobz.sh:/usr/bin/cek-noobz"
+    "menu/m-noobz.sh:/usr/bin/m-noobz"
+    "menu/m-ip.sh:/usr/bin/m-ip"
     "menu/m-bot.sh:/usr/bin/m-bot"
     "menu/m-theme.sh:/usr/bin/m-theme"
     "menu/m-vmess.sh:/usr/bin/m-vmess"
@@ -96,6 +101,8 @@ function res1() {
     "menu/trialtrojan.sh:/usr/bin/trialvless"
     "menu/trialvless.sh:/usr/bin/trialtrojan"
     "menu/trialssh.sh:/usr/bin/trialssh"
+    "install/autocpu.sh:/usr/bin/autocpu"
+    "install/bantwidth:/usr/bin/bantwidth"
   )
 
   for entry in "${scripts[@]}"; do
