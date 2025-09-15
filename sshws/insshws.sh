@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set repository URL
-REPO="https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/"
+REPO="https://raw.githubusercontent.com/wibuxie/autoscript/main/"
 
 # === Install WebSocket for Dropbear ===
 wget -O /usr/local/bin/ws-dropbear "${REPO}sshws/ws-dropbear"
