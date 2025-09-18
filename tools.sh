@@ -4,7 +4,7 @@ set -euo pipefail  # Enable strict mode for better error handling
 # ==============================================
 # CONFIGURATION SECTION
 # ==============================================
-readonly REPO_BASE_URL="https://raw.githubusercontent.com/wibuxie/autoscript/main/"
+readonly REPO_BASE_URL="https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/"
 readonly VNSTAT_VERSION="2.6"
 readonly VNSTAT_ARCHIVE="vnstat-${VNSTAT_VERSION}.tar.gz"
 

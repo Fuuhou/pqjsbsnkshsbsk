@@ -1,137 +1,160 @@
 #!/bin/bash
 
-# ======================================================
-# Script Initialization - Setup Environment & Metadata
-# Author Profil Setup, Root Check, and Host Fixing
-# ======================================================
+# -------------------------------------------------------------------
+#  INITIAL CONFIGURATION
+# -------------------------------------------------------------------
 
-REPO_URL="https://raw.githubusercontent.com/wibuxie/autoscript/main"
+REPO_URL="https://raw.githubusercontent.com/Fuuhou/pqjsbsnkshsbsk/main/"
+START_TIME=$(date +%s)
+THEME_DIR="/etc/rmbl/theme"
+LOG_FILE="/var/log/setup.log"
 
-# --- Styling / Color Configuration ---
-RED='\e[1;31m'
-GREEN='\e[0;32m'
-YELLOW='\e[1;33m'
-BLUE='\033[1;94m'
-BGCOLOR='\e[1;97;101m'
-CYAN='\e[1;36m'
-NC='\e[0m'
+declare -A COLORS=(
+  [RED]='\e[1;31m'
+  [GREEN]='\e[0;32m'
+  [YELLOW]='\e[1;33m'
+  [BLUE]='\033[1;94m'
+  [BGCOLOR]='\e[1;97;101m'
+  [CYAN]='\e[1;36m'
+  [NC]='\e[0m'
+)
 
-# --- Ensure running as root ---
-if [[ "${EUID}" -ne 0 ]]; then
-  echo -e "${RED}You must run this script as root.${NC}"
+# -------------------------------------------------------------------
+#  UTILITY FUNCTIONS
+# -------------------------------------------------------------------
+
+log() {
+  echo "$(date '+%Y-%m-%d %H:%M:%S') $*" | tee -a "$LOG_FILE"
+}
+
+secs_to_human() {
+  local h m s
+  h=$(( $1 / 3600 ))
+  m=$(( ($1 % 3600) / 60 ))
+  s=$(( $1 % 60 ))
+  log "Installation time: ${h}h ${m}m ${s}s"
+}
+
+print_header() {
+  local title=$1
+  echo -e "${COLORS[BLUE]}┌───────────────────────────────────────────┐${COLORS[NC]}"
+  echo -e "${COLORS[BLUE]}│       ${COLORS[NC]}\033[1;37m${title}${COLORS[BLUE]}${COLORS[NC]}${COLORS[BLUE]}│${COLORS[NC]}"
+  echo -e "${COLORS[BLUE]}└───────────────────────────────────────────┘${COLORS[NC]}"
+  echo
+}
+
+print_banner() {
+  echo -e "${COLORS[BLUE]}│${COLORS[BGCOLOR]} $1 ${COLORS[NC]}${COLORS[BLUE]}│${COLORS[NC]}"
+}
+
+clear_screen() {
+  clear
+  sleep 0.5
+}
+
+# -------------------------------------------------------------------
+#  REQUIREMENTS CHECK
+# -------------------------------------------------------------------
+
+if [[ "$EUID" -ne 0 ]]; then
+  log "[ERROR] This script must be run as root."
   exit 1
 fi
 
-# --- Check if OpenVZ is used (unsupported) ---
 if [[ "$(systemd-detect-virt)" == "openvz" ]]; then
-  echo -e "${RED}OpenVZ is not supported by this script.${NC}"
+  log "[ERROR] OpenVZ is not supported."
   exit 1
 fi
 
-# --- Hostname Fixing for DNS Issues ---
+# -------------------------------------------------------------------
+#  HOSTNAME & DNS SETUP
+# -------------------------------------------------------------------
+
 LOCAL_IP=$(hostname -I | awk '{print $1}')
 HOSTNAME_CURRENT=$(hostname)
-HOSTNAME_REGISTERED=$(awk '/'"$HOSTNAME_CURRENT"'/{print $2}' /etc/hosts)
-
-if [[ "$HOSTNAME_CURRENT" != "$HOSTNAME_REGISTERED" ]]; then
-  echo "$LOCAL_IP $HOSTNAME_CURRENT" >> /etc/hosts
+if ! grep -q "$HOSTNAME_CURRENT" /etc/hosts; then
+  echo "$LOCAL_IP $HOSTNAME_CURRENT" | tee -a /etc/hosts &>/dev/null
+  log "[INFO] Added $HOSTNAME_CURRENT to /etc/hosts"
 fi
 
-# --- Utility: Convert Seconds to Human Time Format ---
-secs_to_human() {
-  echo "Installation time : $(( $1 / 3600 )) hours $(( ($1 / 60) % 60 )) minutes $(( $1 % 60 )) seconds"
-}
+# -------------------------------------------------------------------
+#  DIRECTORY INITIALIZATION
+# -------------------------------------------------------------------
 
-# --- Directory Initialization ---
+# Clean and recreate directories safely
 rm -rf /etc/rmbl
-mkdir -p /etc/rmbl/theme
-mkdir -p /var/lib > /dev/null 2>&1
+mkdir -p /etc/rmbl/theme /var/lib
 echo "IP=" > /var/lib/ipvps.conf
+log "[INFO] Initialized directories and files"
 
-# --- Clear Screen & Prompt for Author Name ---
-clear
-echo -e "${BLUE}│ ${BGCOLOR}           MASUKKAN NAMA KAMU         ${NC}${BLUE} │${NC}"
-echo ""
+# -------------------------------------------------------------------
+#  AUTHOR PROMPT
+# -------------------------------------------------------------------
 
-# --- Read and Validate Author Name ---
-while true; do
-  read -rp "Masukan Nama Kamu Disini tanpa spasi: " name
-  if [[ $name =~ ^[a-zA-Z0-9_.-]+$ ]]; then
-    break
-  else
-    echo -e "${RED}Nama tidak valid. Hanya boleh huruf, angka, titik, garis bawah, atau minus.${NC}"
-  fi
-done
-
-# --- Save Author Name ---
-echo "$name" > /etc/profil
-
-# --- Confirmation Display ---
-clear
-AUTHOR_NAME=$(cat /etc/profil)
-echo -e "${GREEN}Nama berhasil disimpan sebagai: $AUTHOR_NAME${NC}"
-
-function domain() {
-    clear
-    tput civis
-    echo -e "${BIBlue}┌───────────────────────────────────────────┐${NC}"
-    echo -e "${BIBlue}│       \033[1;37mKonfigurasi Domain Server Kamu       ${BIBlue}│${NC}"
-    echo -e "${BIBlue}└───────────────────────────────────────────┘${NC}"
-    echo ""
-
-    # === Input domain utama ===
-    local dnss=""
-    until [[ "$dnss" =~ ^[a-zA-Z0-9_.-]+$ ]]; do
-        read -rp "🌐 Masukkan domain kamu: " -e dnss
-    done
-
-    # === Input NS domain (optional tapi disarankan) ===
-    local nss=""
-    until [[ "$nss" =~ ^[a-zA-Z0-9_.-]+$ ]]; do
-        read -rp "🛰️ Masukkan NS Domain (contoh: ns1.${dnss}): " -e nss
-    done
-
-    # === Inisialisasi direktori dan file konfigurasi ===
-    rm -rf /etc/xray /etc/v2ray /etc/domain /etc/per /root/subdomainx
-    mkdir -p /etc/xray /etc/v2ray /etc/domain /etc/per
-    touch /etc/xray/{domain,slwdomain,scdomain}
-    touch /etc/v2ray/{domain,scdomain}
-    touch /etc/per/{id,token}
-    touch /etc/domain/{nsdomain,subdomain}
-
-    # === Simpan domain dan NS ke lokasi masing-masing ===
-    echo "$dnss" | tee /root/domain /root/scdomain /etc/xray/domain /etc/xray/scdomain /etc/v2ray/domain /etc/v2ray/scdomain >/dev/null
-    echo "$nss" > /etc/domain/nsdomain
-    echo "$dnss" > /etc/domain/subdomain
-    echo "IP=$dnss" > /var/lib/ipvps.conf
-
-    # === Progres visual update konfigurasi ===
-    {
-        sleep 2
-        touch "$HOME/fim"
-    } &
-    echo -ne "🔧 Mengupdate konfigurasi domain... ["
-    while true; do
-        for ((i = 0; i < 20; i++)); do
-            echo -ne "#"
-            sleep 0.05
-        done
-        [[ -e "$HOME/fim" ]] && rm "$HOME/fim" && break
-        echo -e "]"
-        tput cuu1 && tput dl1
-        echo -ne "🔧 Mengupdate konfigurasi domain... ["
-    done
-    echo -e "] ✅ Selesai!"
-    tput cnorm
-    sleep 1
-    clear
+user_prompt() {
+  clear_screen
+  print_banner "MASUKKAN NAMA KAMU"
+  while true; do
+    read -rp "Masukkan Nama Kamu (tanpa spasi): " name
+    if [[ "$name" =~ ^[a-zA-Z0-9_.-]+$ ]]; then
+      break
+    else
+      echo -e "${COLORS[RED]}Nama tidak valid. Gunakan huruf, angka, titik, garis bawah, atau minus.${COLORS[NC]}"
+    fi
+  done
+  echo "$name" > /etc/profil
+  clear_screen
+  echo -e "${COLORS[GREEN]}Nama berhasil disimpan sebagai: $name${COLORS[NC]}"
+  log "[INFO] User profile set to $name"
 }
+user_prompt
 
+# -------------------------------------------------------------------
+#  DOMAIN CONFIGURATION
+# -------------------------------------------------------------------
 
-THEME_DIR="/etc/rmbl/theme"
+configure_domain() {
+  clear_screen
+  print_header "Configure Server Domain"
+  local dnss nss
+  until [[ "$dnss" =~ ^[a-zA-Z0-9_.-]+$ ]]; do
+    read -rp "🌐 Masukkan domain kamu: " dnss
+  done
+  until [[ "$nss" =~ ^[a-zA-Z0-9_.-]+$ ]]; do
+    read -rp "🛰️  Masukkan NS Domain (contoh: ns1.${dnss}): " nss
+  done
+
+  rm -rf /etc/xray /etc/v2ray /etc/domain /etc/per /root/subdomainx
+  mkdir -p /etc/xray /etc/v2ray /etc/domain /etc/per
+  touch /etc/xray/{domain,slwdomain,scdomain} /etc/v2ray/{domain,scdomain} /etc/per/{id,token} /etc/domain/{nsdomain,subdomain}
+
+  echo "$dnss" | tee /root/domain /root/scdomain /etc/xray/domain /etc/xray/scdomain /etc/v2ray/domain /etc/v2ray/scdomain &>/dev/null
+  echo "$nss" > /etc/domain/nsdomain
+  echo "$dnss" > /etc/domain/subdomain
+  echo "IP=$dnss" > /var/lib/ipvps.conf
+
+  { sleep 2 && touch "$HOME/fim"; } &
+  echo -ne "🔧 Updating domain configuration... ["
+  while true; do
+    for _ in {1..20}; do
+      echo -n "#"
+      sleep 0.05
+    done
+    [[ -f "$HOME/fim" ]] && { rm -f "$HOME/fim"; break; }
+    echo -en "]\r"
+    echo -ne "🔧 Updating domain configuration... ["
+  done
+  echo -e "] ✅ Done!"
+  clear_screen
+  log "[INFO] Domain $dnss configured"
+}
+configure_domain
+
+# -------------------------------------------------------------------
+#  THEMES INITIALIZATION
+# -------------------------------------------------------------------
+
 mkdir -p "$THEME_DIR"
-
-# Associative array untuk warna tema
 declare -A THEMES=(
   [green]="\E[40;1;42m|\033[0;32m"
   [yellow]="\E[40;1;43m|\033[0;33m"
@@ -146,130 +169,79 @@ declare -A THEMES=(
   [lightyellow]="\E[40;1;103m|\033[0;93m"
   [lightblue]="\E[40;1;104m|\033[0;94m"
   [lightmagenta]="\E[40;1;105m|\033[0;95m"
-  [lightcyan]="\E[40;1;106m|\033[0;96m"
+  [lightcyan]="E[40;1;106m|\033[0;96m"
 )
-
-# Menulis file konfigurasi masing-masing tema
 for theme in "${!THEMES[@]}"; do
   IFS="|" read -r bg text <<< "${THEMES[$theme]}"
   cat <<EOF > "$THEME_DIR/$theme"
-BG : $bg
-TEXT : $text
+BG: $bg
+TEXT: $text
 EOF
 done
-
-# Set default theme
 echo "lightcyan" > "$THEME_DIR/color.conf"
+log "[INFO] Theme files initialized"
 
-function xie1() {
-  clear
-  cd
-  echo "🔧 Menonaktifkan IPv6..."
-  sysctl -w net.ipv6.conf.all.disable_ipv6=1 >/dev/null 2>&1
-  sysctl -w net.ipv6.conf.default.disable_ipv6=1 >/dev/null 2>&1
+# -------------------------------------------------------------------
+#  INSTALLATION STAGES
+# -------------------------------------------------------------------
 
-  echo "📦 Menjalankan tools.sh..."
-  wget -q "${repo}tools.sh"
-  chmod +x tools.sh
-  bash tools.sh
+stage_1() {
+  set -e
+  clear_screen
+  log "[INFO] Disabling IPv6"
+  sysctl -w net.ipv6.conf.all.disable_ipv6=1 &>/dev/null
+  sysctl -w net.ipv6.conf.default.disable_ipv6=1 &>/dev/null
 
-  echo "🕒 Mengatur zona waktu dan menginstal dependensi..."
+  log "[INFO] Downloading tools.sh"
+  if wget -q "${REPO_URL}tools.sh" -O tools.sh; then
+    chmod +x tools.sh
+    log "[INFO] Running tools.sh"
+    bash tools.sh || { log "[ERROR] Failed to run tools.sh"; exit 1; }
+    rm -f tools.sh
+  else
+    log "[ERROR] Failed to download tools.sh"
+    exit 1
+  fi
+
+  log "[INFO] Setting timezone and installing dependencies"
   ln -fs /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
-  apt install -y git curl python >/dev/null 2>&1
-
-  clear
+  apt-get update && apt-get install -y --no-install-recommends git curl python3 &>/dev/null
+  clear_screen
 }
 
-function xie2() {
+stage_2() {
   declare -A INSTALLERS=(
-    ["SSH & OVPN"]="${repo}install/ssh-vpn.sh"
-    ["XRAY"]="${repo}install/ins-xray.sh"
-    ["WebSocket SSH"]="${repo}sshws/insshws.sh"
-    ["Backup Menu"]="${repo}install/set-br.sh"
-    ["OHP"]="${repo}sshws/ohp.sh"
-    ["Extra Menu"]="${repo}update.sh"
-    ["SlowDNS"]="${repo}slowdns/installsl.sh"
-    ["UDP Custom"]="${repo}install/udp-custom.sh"
-    ["Limit XRAY"]="${repo}bin/limit.sh"
-    ["Trojan-GO"]="${repo}install/ins-trgo.sh"
+    ["SSH & OVPN"]="${REPO_URL}install/ssh-vpn.sh"
+    ["XRAY"]="${REPO_URL}install/ins-xray.sh"
+    ["WebSocket SSH"]="${REPO_URL}sshws/insshws.sh"
+    ["Backup Menu"]="${REPO_URL}install/set-br.sh"
+    ["OHP"]="${REPO_URL}sshws/ohp.sh"
+    ["Extra Menu"]="${REPO_URL}update.sh"
+    ["SlowDNS"]="${REPO_URL}slowdns/installsl.sh"
+    ["UDP Custom"]="${REPO_URL}install/udp-custom.sh"
   )
-
   for name in "${!INSTALLERS[@]}"; do
-    echo -e "${BIBlue}│ ${BGCOLOR}  INSTALASI: ${name} ${NC}${BIBlue} │${NC}"
-    wget -q "${INSTALLERS[$name]}" -O temp_install.sh
-    chmod +x temp_install.sh
-    bash temp_install.sh
-    rm -f temp_install.sh
-    clear
+    print_banner "INSTALLING: ${name}"
+    log "[INFO] Downloading installer for $name"
+    if wget -q "${INSTALLERS[$name]}" -O temp_install.sh; then
+      chmod +x temp_install.sh
+      log "[INFO] Running installer for $name"
+      bash temp_install.sh || log "[WARNING] Installer for $name failed"
+      rm -f temp_install.sh
+    else
+      log "[ERROR] Failed to download installer for $name"
+    fi
+    clear_screen
   done
-
-  echo -e "${BIBlue}│ ${BGCOLOR}  INSTALASI: NOOBZVPNS ${NC}${BIBlue} │${NC}"
-  wget -q "${repo}noobz/noobzvpns.zip"
-  unzip -o noobzvpns.zip -d noobzvpns >/dev/null 2>&1
-  chmod +x noobzvpns/*
-  bash noobzvpns/install.sh
-  rm -rf noobzvpns noobzvpns.zip
-  systemctl restart noobzvpns
-  clear
 }
 
+stage_1
+stage_2
 
-function xie3() {
-  clear
+# -------------------------------------------------------------------
+#  POST-INSTALLATION
+# -------------------------------------------------------------------
 
-  # === Konfigurasi Telegram ===
-  local CHATID="-1002305290411"
-  local TOKEN="7762568765:AAHj5g7akuzr6RYRnEdRnMeVxaGf-rj1wME"
-  local URL="https://api.telegram.org/bot${TOKEN}/sendMessage"
-  local TIMEOUT=10
-
-  # === Informasi Sistem ===
-  local DOMAIN=$(< /etc/xray/domain)
-  local ISP=$(< /etc/xray/isp)
-  local CITY=$(< /etc/xray/city)
-  local OS_INFO=$(grep -w PRETTY_NAME /etc/os-release | sed -e 's/^.*=//' -e 's/"//g')
-  local RAM_TOTAL=$(free -m | awk 'NR==2 {print $2}')
-  local TIME=$(date '+%d %b %Y')
-  local MYIP=$(curl -sS ipv4.icanhazip.com)
-
-  # === Validasi dan Lisensi ===
-  local IZIN=$(curl -sS https://raw.githubusercontent.com/wibuxie/iz/main/ip | grep "$MYIP" | awk '{print $3}')
-  local USRSC=$(curl -sS https://raw.githubusercontent.com/wibuxie/iz/main/ip | grep "$MYIP" | awk '{print $2}')
-  local EXPSC="$IZIN"
-
-  # === Format Pesan Telegram ===
-  local TEXT="
-<b>INSTALLASI BERHASIL - AUTOSCRIPT PREMIUM </b>
-━━━━━━━━━━━━━━━━━━━━
-<b>📦 Informasi Sistem:</b>
-<code>📡 ID :</b> $USRSC</code>
-<code>📆 Tanggal :</b> $TIME</code>
-<code>📁 Expiry :</b> $EXPSC</code>
-<code>🌐 Domain :</b> $DOMAIN</code>
-<code>🏢 ISP :</b> $ISP</code>
-<code>📍 Kota :</b> $CITY</code>
-<code>🧠 RAM :</b> ${RAM_TOTAL} MB</code>
-<code>🖥️ OS :</b> $OS_INFO</code>
-<code>🔎 IP Publik :</b> $MYIP</code>
-━━━━━━━━━━━━━━━━━━━━
-<i>🔔 Notifikasi otomatis via XIESTORE Script</i>"
-
-
-  local BUTTONS='&reply_markup={"inline_keyboard":[[{"text":"ᴏʀᴅᴇʀ","url":"https://t.me/superxiez"},{"text":"JOIN","url":"https://t.me/xiestorez"}]]}'
-
-  # === Kirim Notifikasi ===
-  curl -s --max-time $TIMEOUT \
-    -d "chat_id=$CHATID&disable_web_page_preview=true&parse_mode=html&text=$TEXT$BUTTONS" \
-    "$URL" > /dev/null
-}
-
-
-# === Eksekusi Tahap Awal ===
-clear
-xie1
-xie2
-
-# === Konfigurasi .profile untuk menu otomatis ===
 cat > /root/.profile <<EOF
 if [ "\$BASH" ]; then
   [ -f ~/.bashrc ] && . ~/.bashrc
@@ -280,49 +252,25 @@ menu
 EOF
 chmod 644 /root/.profile
 
-# === Pembersihan File Lama ===
-rm -f /root/log-install.txt /etc/afak.conf /root/{setup.sh,slhost.sh,ssh-vpn.sh,ins-xray.sh,insshws.sh,set-br.sh,ohp.sh,update.sh,slowdns.sh} >/dev/null 2>&1
+# Cleanup
+rm -f /root/{setup.sh,log-install.txt,tools.sh,slhost.sh,ssh-vpn.sh,ins-xray.sh,insshws.sh,set-br.sh,ohp.sh,update.sh,slowdns.sh} &>/dev/null
 
-# === Inisialisasi Log User Jika Belum Ada ===
 [[ ! -f "/etc/log-create-user.log" ]] && echo "Log All Account " > /etc/log-create-user.log
-
-# === Informasi Versi Script dan Zona Waktu ===
-history -c
-serverV=$(curl -sS "${repo}versi")
-echo "$serverV" > /opt/.ver
-ln -fs /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
-
-# === Konversi AM/PM Berdasarkan Nilai File ===
-aureb=$(< /home/re_otm)
-gg=$([ "$aureb" -gt 11 ] && echo "PM" || echo "AM")
-
-# === Informasi Sistem ===
 curl -sS ifconfig.me > /etc/myipvps
 curl -s "ipinfo.io/city" > /etc/xray/city
 curl -s "ipinfo.io/org" | cut -d " " -f 2-10 > /etc/xray/isp
 
-# === Setup Direktori dan File Pendukung ===
-mkdir -p /etc/noobz
-echo "" > /etc/xray/noob
-
-# === Logging Waktu Install ===
-secs_to_human "$(($(date +%s) - ${start}))" | tee -a log-install.txt
+secs_to_human "$(($(date +%s) - START_TIME))" | tee -a log-install.txt
 sleep 3
-echo ""
 
-# === Kirim Info Telegram dan Selesai ===
-cd
-xie3
-rm -rf *
-
-echo -e "${BIBlue}│ ${BGCOLOR} INSTALL SCRIPT SELESAI.. ${NC}${BIBlue} │${NC}"
-echo ""
-sleep 4
-
-# === Prompt Reboot ===
-read -rp "[ ${yell}WARNING${NC} ] Do you want to reboot now? (y/n): " answer
-if [[ "$answer" =~ ^[Yy]$ ]]; then
-  reboot
-else
-  exit 0
-fi
+print_banner "INSTALLATION COMPLETE"
+echo
+echo -e "${COLORS[YELLOW]}WARNING: Reboot is recommended after installation.${COLORS[NC]}"
+while true; do
+  read -rp "Reboot now? (y/n): " answer
+  case "$answer" in
+    [Yy]* ) reboot;;
+    [Nn]* ) exit 0;;
+    * ) echo "Please answer yes (y) or no (n).";;
+  esac
+done
