@@ -14,8 +14,8 @@ LIGHT='\033[0;37m'
 wget -q https://github.com/Fuuhou/ohape/raw/refs/heads/main/ohpserver-linux32.zip
 unzip -q ohpserver-linux32.zip
 chmod +x ohpserver
-cp ohpserver /usr/local/bin/ohpserver
-rm -rf ohpserver*
+sudo cp ohpserver /usr/local/bin/ohpserver
+rm -f ohpserver-linux32.zip ohpserver
 
 # Service SSH OHP
 cat > /etc/systemd/system/ssh-ohp.service << EOF
