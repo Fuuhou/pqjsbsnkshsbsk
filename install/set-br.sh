@@ -20,21 +20,30 @@ rm -rf wondershaper
 
 # Unduh script ke /usr/bin
 cd /usr/bin
-wget -qO backup "${repo}menu/backup.sh"
-wget -qO restore "${repo}menu/restore.sh"
 wget -qO cleaner "${repo}install/cleaner.sh"
 wget -qO xp "${repo}install/xp.sh"
 wget -qO gen-nginx "${repo}install/gen-nginx.sh"
 wget -qO watch-nginx "${repo}install/watch-nginx.sh"
 wget -qO xray-usage "${repo}install/xray-usage.sh"
-chmod +x backup restore cleaner xp gen-nginx watch-nginx xray-usage
+wget -qO monitor "${repo}install/monitor.sh"
+
+chmod +x cleaner xp gen-nginx watch-nginx xray-usage monitor
 
 # Setup cron job untuk cleaner setiap 13 menit
-if [[ ! -f /etc/cron.d/cleaner ]]; then
-    cat > /etc/cron.d/cleaner << EOF
+if [[ ! -f /etc/cron.d/auto_cleaner ]]; then
+    cat > /etc/cron.d/auto_cleaner << EOF
 SHELL=/bin/sh
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 */13 * * * * root /usr/bin/cleaner
+EOF
+fi
+
+# Setup cron job untuk monitor service setiap menit
+if [[ ! -f /etc/cron.d/auto_monitor ]]; then
+    cat > /etc/cron.d/auto_monitor << EOF
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+* * * * * root /usr/bin/monitor
 EOF
 fi
 
